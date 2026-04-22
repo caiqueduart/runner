@@ -37,5 +37,7 @@ jobs:
               uses: softprops/action-gh-release@v2
               with:
                   files: assinatura-*
+                  tag_name: latest # Define um nome fixo para a release [cite: 100, 163]
+                  name: 'Build Contínuo - Main'
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
