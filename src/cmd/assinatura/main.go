@@ -1,7 +1,32 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+var version = "v0.1.0"
 
 func main() {
-	fmt.Println("Hello, World!")
+	var rootCmd = &cobra.Command{
+		Use:   "assinatura",
+		Short: "Ferramenta CLI para assinatura",
+	}
+
+	var versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Exibe a versão atual do CLI",
+
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Assinatura CLI - Versão: %s\n", version)
+		},
+	}
+
+	rootCmd.AddCommand(versionCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
