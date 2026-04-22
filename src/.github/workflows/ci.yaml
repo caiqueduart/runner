@@ -1,0 +1,41 @@
+name: CI & Release
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                goos: [linux, windows, darwin] # Linux, Windows e macOS
+                goarch: [amd64]
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Configurar Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: '1.26.x'
+
+            - name: Download dependências
+              run: go mod download
+
+            - name: Compilar (Build)
+              run: |
+                  BINARY_NAME=assinatura-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
+
+                  # Entra na pasta do CLI e compila [cite: 325]
+                  GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./cmd/assinatura
+
+            - name: Upload dos binários para a Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: assinatura-*
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
