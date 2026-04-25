@@ -40,7 +40,7 @@ jobs:
               shell: bash
               run: |
                   # Extrai a versão a partir do código Go
-                  RAW_VERSION=$(grep -oP 'var version = "\K[^"]+' assinatura.go)
+                  RAW_VERSION=$(grep -oP 'var version = "\K[^"]+' main.go)
                   VERSION="v$RAW_VERSION"
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
 
