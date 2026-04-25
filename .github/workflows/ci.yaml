@@ -10,15 +10,22 @@ permissions:
 
 jobs:
     build:
+        name: Build multi plataforma
         runs-on: ubuntu-latest
         strategy:
             matrix:
                 goos: [linux, windows, darwin] # Linux, Windows e macOS
                 goarch: [amd64]
 
+        defaults:
+            run:
+                working-directory: projects/cmd
+
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Configurar Go
               uses: actions/setup-go@v5
