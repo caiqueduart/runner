@@ -20,32 +20,28 @@ Documentação em desenvolvimento...
 ```
 runner/
 ├── .github/
-│   └── workflows/          # Workflows do GitHub (CI/CD)
+│   └── workflows/              # Workflows do GitHub Actions (CI/CD)
 │
-├── docs/                   # Documentações
-├── bin/                    # Local para binários compilados localmente
-├── api/                    # Especificações de interface
+├── docs/                       # Documentações
+├── bin/                        # Local para binários compilados localmente
 │
-├── cmd/                    # Código-fonte das aplicações Go (CLIs)
-│   ├── assinatura/         # CLI de assinatura (assinatura-cli)
-│   │   ├── main.go
-│   │   └── commands/
-│   │
-│   └── simulador/          # CLI do simulador (simulador-cli)
-│       ├── main.go
-│       └── commands/
-│
-├── internal/               # Código Go compartilhado (não exportável)
-│   └── jdk/                # Lógica de provisionamento automático do JDK
-│
-├── projetos/
-│   └── assinador-java/     # Código-fonte da aplicação Java
-│       ├── src/
-│       │   ├── main/java/  # Lógica de validação e simulação
-│       │   └── test/java/  # Testes unitários e de integração
-│       ├── pom.xml         # Arquivo de configuração do Maven
-│       └── README.md       # Instruções específicas do projeto Java
-│
-├── go.mod                  # Definição do módulo Go principal
-└── go.sum                  # Checksums das dependências Go
+└── projetos/
+    ├── cmd/                    # Código-fonte das aplicações Go (CLIs)
+    │   ├── assinatura/         # CLI de assinatura
+    │   │   ├── main.go
+    │   │   └── commands/
+    │   │
+    │   ├── simulador/          # CLI do simulador
+    │   │   ├── main.go
+    │   │   └── commands/
+    │   │
+    │   ├── go.mod              # Definição do módulo Go principal
+    │   └── go.sum              # Checksums das dependências Go
+    │
+    └── assinador-java/         # Código-fonte da aplicação Java
+       ├── src/
+       │   ├── main/java/       # Lógica de validação e simulação
+       │   └── test/java/       # Testes unitários e de integração
+       ├── pom.xml              # Arquivo de configuração do Maven
+       └── README.md            # Instruções específicas do projeto Java
 ```
