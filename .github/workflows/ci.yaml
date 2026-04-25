@@ -35,19 +35,37 @@ jobs:
             - name: Download dependências
               run: go mod download
 
+            - name: Extract Version
+              id: version
+              shell: bash
+              run: |
+                  # Extrai a versão a partir do código Go
+                  RAW_VERSION=$(grep -oP 'var version = "\K[^"]+' cmd/version.go)
+                  VERSION="v$RAW_VERSION"
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+                  # Verifica se a tag já existe no repositório
+                  if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
+                      echo "TAG_EXISTS=true" >> $GITHUB_ENV
+                  else
+                      echo "TAG_EXISTS=false" >> $GITHUB_ENV
+                  fi
+
             - name: Compilar (Build)
               run: |
-                  BINARY_NAME=assinatura-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  BINARY_NAME=assinatura-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
                   if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
 
                   # Entra na pasta do CLI e compila
                   GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./assinatura
 
-            - name: Upload dos binários para a Release
+            - name: Upload dos binários para a Release e adiciona tag
               uses: softprops/action-gh-release@v2
+              if: env.TAG_EXISTS == 'false'
               with:
+                  tag_name: ${{ env.VERSION }}
+                  name: 'Releases ${{ env.VERSION }}'
+                  generate_release_notes: true
                   files: assinatura-*
-                  tag_name: latest # Define um nome fixo para a release [cite: 100, 163]
-                  name: 'Build Contínuo - Main'
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
