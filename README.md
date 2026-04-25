@@ -25,7 +25,7 @@ runner/
 ├── docs/                       # Documentações
 ├── bin/                        # Local para binários compilados localmente
 │
-└── projetos/
+└── projects/
     ├── cmd/                    # Código-fonte das aplicações Go (CLIs)
     │   ├── assinatura/         # CLI de assinatura
     │   │   ├── main.go
