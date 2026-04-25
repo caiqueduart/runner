@@ -35,7 +35,7 @@ jobs:
             - name: Download dependências
               run: go mod download
 
-            - name: Extract Version
+            - name: Extrair versão
               id: version
               shell: bash
               run: |
@@ -59,12 +59,19 @@ jobs:
                   # Entra na pasta do CLI e compila
                   GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./assinatura
 
+            - name: Upload de artefatos
+              uses: actions/upload-artifact@v4
+              with:
+                  name: assinatura-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  path: |
+                      projects/cmd/assinatura/assinatura-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+
             - name: Upload dos binários para a Release e adiciona tag
               uses: softprops/action-gh-release@v2
               if: env.TAG_EXISTS == 'false'
               with:
                   tag_name: ${{ env.VERSION }}
-                  name: 'Releases ${{ env.VERSION }}'
+                  name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
                   files: |
                       projects/cmd/assinatura/assinatura-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
