@@ -41,7 +41,7 @@ jobs:
                   if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
 
                   # Entra na pasta do CLI e compila
-                  GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./projects/cmd/assinatura
+                  GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./assinatura
 
             - name: Upload dos binários para a Release
               uses: softprops/action-gh-release@v2
