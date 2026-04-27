@@ -76,10 +76,18 @@ jobs:
 
             - name: Upload dos binários para a Release e adiciona tag
               uses: softprops/action-gh-release@v2
-              if: env.TAG_EXISTS == 'false' && matrix.create_release == true
+              if: matrix.create_release == true
               with:
                   tag_name: ${{ env.VERSION }}
                   name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
+                  files: |
+                      projects/cli/${{ env.FINAL_BINARY_NAME }}
+
+            - name: Upload dos binários para release existente
+              uses: softprops/action-gh-release@v2
+              if: matrix.create_release == false && env.TAG_EXISTS == 'false'
+              with:
+                  tag_name: ${{ env.VERSION }}
                   files: |
                       projects/cli/${{ env.FINAL_BINARY_NAME }}
