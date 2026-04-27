@@ -16,6 +16,13 @@ jobs:
             matrix:
                 goos: [linux, windows, darwin] # Linux, Windows e macOS
                 goarch: [amd64]
+                include:
+                    - goos: linux
+                      create_release: true
+                    - goos: windows
+                      create_release: false
+                    - goos: darwin
+                      create_release: false
 
         defaults:
             run:
@@ -69,7 +76,7 @@ jobs:
 
             - name: Upload dos binários para a Release e adiciona tag
               uses: softprops/action-gh-release@v2
-              if: env.TAG_EXISTS == 'false'
+              if: env.TAG_EXISTS == 'false' && matrix.create_release == true
               with:
                   tag_name: ${{ env.VERSION }}
                   name: 'Release ${{ env.VERSION }}'
