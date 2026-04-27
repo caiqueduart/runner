@@ -19,7 +19,7 @@ jobs:
 
         defaults:
             run:
-                working-directory: projects/cmd
+                working-directory: projects/cli
 
         steps:
             - name: Checkout
@@ -40,7 +40,7 @@ jobs:
               shell: bash
               run: |
                   # Extrai a versão a partir do código Go
-                  RAW_VERSION=$(grep -oP 'var version = "\K[^"]+' assinatura/main.go)
+                  RAW_VERSION=$(grep -oP 'const CLI_VERSION = "\K[^"]+' assinatura/cmd/version.go)
                   VERSION="v$RAW_VERSION"
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -65,7 +65,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: ${{ env.FINAL_BINARY_NAME }}
-                  path: projects/cmd/${{ env.FINAL_BINARY_NAME }}
+                  path: projects/cli/${{ env.FINAL_BINARY_NAME }}
 
             - name: Upload dos binários para a Release e adiciona tag
               uses: softprops/action-gh-release@v2
@@ -75,4 +75,4 @@ jobs:
                   name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
                   files: |
-                      projects/cmd/${{ env.FINAL_BINARY_NAME }}
+                      projects/cli/${{ env.FINAL_BINARY_NAME }}

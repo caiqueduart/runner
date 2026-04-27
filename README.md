@@ -15,7 +15,7 @@ Runner é um projeto CLI para validação de assinaturas digitais, desenvolvido 
 
 Documentação em desenvolvimento...
 
-### Possível estrutura de diretórios
+### Estrutura de diretórios
 
 ```
 runner/
@@ -23,22 +23,21 @@ runner/
 │   └── workflows/              # Workflows do GitHub Actions (CI/CD)
 │
 ├── docs/                       # Documentações
-├── bin/                        # Local para binários compilados localmente
 │
 └── projects/
-    ├── cmd/                    # Código-fonte das aplicações Go (CLIs)
+    ├── cli/                    # Código-fonte das aplicações Go (CLIs)
     │   ├── assinatura/         # CLI de assinatura
-    │   │   ├── main.go
-    │   │   └── commands/
+│   │   │   ├── cmd/            # Comandos disponibilizados pelo CLI
+    │   │   └── main.go
     │   │
     │   ├── simulador/          # CLI do simulador
-    │   │   ├── main.go
-    │   │   └── commands/
+    │   │   ├── cmd/            # Comandos disponibilizados pelo CLI
+    │   │   └── main.go
     │   │
     │   ├── go.mod              # Definição do módulo Go principal
     │   └── go.sum              # Checksums das dependências Go
     │
-    └── assinador-java/         # Código-fonte da aplicação Java
+    └── assinador-java/         # Código-fonte da aplicação Assinador (Java)
        ├── src/
        │   ├── main/java/       # Lógica de validação e simulação
        │   └── test/java/       # Testes unitários e de integração

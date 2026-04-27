@@ -1,4 +1,4 @@
-module github.com/caiqueduart/assinatura
+module runner
 
 go 1.26.2
 
