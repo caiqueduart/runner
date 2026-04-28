@@ -13,15 +13,17 @@ var signCmd = &cobra.Command{
 	Short: "Assina um documento",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		// Verifica e o arquivo .jar está
-		const JAR_PATH = "../../assinador/dist/assinador.jar"
 
+		const JAR_PATH = "../../assinador/dist/assinador.jar"
+		var fullArgs = append([]string{"-jar", JAR_PATH}, args...)
+
+		// Verifica se o arquivo .jar existe
 		if _, err := os.Stat(JAR_PATH); os.IsNotExist(err) {
 			fmt.Printf("Erro: O arquivo %s não foi encontrado.", JAR_PATH)
 			return
 		}
 
-		javaCmd := exec.Command("java", "-jar", JAR_PATH, "Caique Duarte", "21")
+		javaCmd := exec.Command("java", fullArgs...)
 
 		output, err := javaCmd.CombinedOutput()
 
