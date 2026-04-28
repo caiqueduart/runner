@@ -27,7 +27,7 @@ runner/
 └── projects/
     ├── cli/                    # Código-fonte das aplicações Go (CLIs)
     │   ├── assinatura/         # CLI de assinatura
-│   │   │   ├── cmd/            # Comandos disponibilizados pelo CLI
+    │   │   ├── cmd/            # Comandos disponibilizados pelo CLI
     │   │   └── main.go
     │   │
     │   ├── simulador/          # CLI do simulador
