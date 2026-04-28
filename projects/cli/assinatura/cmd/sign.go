@@ -21,7 +21,7 @@ var signCmd = &cobra.Command{
 			return
 		}
 
-		javaCmd := exec.Command("java", "-jar", JAR_PATH)
+		javaCmd := exec.Command("java", "-jar", JAR_PATH, "Caique Duarte", "21")
 
 		output, err := javaCmd.CombinedOutput()
 
@@ -30,7 +30,6 @@ var signCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("Resultado do Assinador:")
 		fmt.Println(string(output))
 	},
 }
