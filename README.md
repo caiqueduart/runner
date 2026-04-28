@@ -38,9 +38,12 @@ runner/
     │   └── go.sum              # Checksums das dependências Go
     │
     └── assinador-java/         # Código-fonte da aplicação Assinador (Java)
+       ├── dist/                # Arquivos compilados .jar
+       │
        ├── src/
        │   ├── main/java/       # Lógica de validação e simulação
        │   └── test/java/       # Testes unitários e de integração
+       │
        ├── pom.xml              # Arquivo de configuração do Maven
        └── README.md            # Instruções específicas do projeto Java
 ```
