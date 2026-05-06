@@ -4,36 +4,32 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runner/assinatura/internal"
 
 	"github.com/spf13/cobra"
 )
 
 var file string
 
+const CMD_KEY = "sign"
+
 var signCmd = &cobra.Command{
-	Use:   "sign",
+	Use:   CMD_KEY,
 	Short: "Assina um documento",
 
 	Run: func(cmd *cobra.Command, args []string) {
 
-		if file == "" {
-			fmt.Println("Erro: Use a flag -f para indicar o caminho do arquivo.")
-			return
-		}
-
-		// 1. Validação do CLI: O arquivo do usuário existe?
 		content, err := os.ReadFile(file)
 		if err != nil {
-			fmt.Printf("Erro ao ler o arquivo '%s': %v\n", file, err)
+			internal.PrintError("Ocorreu um erro ao ler o arquivo '%s': \n'%s'", file, err)
 			return
 		}
 
 		const JAR_PATH = "../../assinador/src/Main.java"
-		var fullArgs = []string{ /* "-jar", */ JAR_PATH, string(content)}
+		var fullArgs = []string{ /* "-jar", */ JAR_PATH, CMD_KEY, string(content)}
 
-		// Verifica se o arquivo .jar existe
 		if _, err := os.Stat(JAR_PATH); os.IsNotExist(err) {
-			fmt.Printf("Erro: O arquivo %s não foi encontrado.", JAR_PATH)
+			internal.PrintError("Erro: O arquivo '%s' não foi encontrado.", JAR_PATH)
 			return
 		}
 
@@ -42,7 +38,7 @@ var signCmd = &cobra.Command{
 		output, err := javaCmd.CombinedOutput()
 
 		if err != nil {
-			fmt.Printf("Erro ao executar o assinador: %s\n", err)
+			internal.PrintError("Ocorreu um erro ao executar o assinador: \n'%s'", err)
 			return
 		}
 
