@@ -22,9 +22,10 @@ public class Main {
                 case "validate":
                     SignatureService.validate(file);
                     break;
-                    
+
                 default:
-                    System.out.print(Tint.RED + "Erro: O comando passado para o Assinador não foi reconhecido." + Tint.RESET);   
+                    String formatedArgs = String.join(" ", args);
+                    System.out.print(Tint.RED + "Erro: O argumento '" + formatedArgs + "' não foi reconhecido pelo Assinador." + Tint.RESET);   
             }
            
         } else {
