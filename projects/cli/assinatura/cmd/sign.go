@@ -3,21 +3,18 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"runner/assinatura/internal"
 
 	"github.com/spf13/cobra"
 )
 
-var file string
-
-const (
-	CMD_KEY  = "sign"
-	JAR_PATH = "../../assinador/src/Main.java"
+var (
+	file   string
+	cmdKey = "sign"
 )
 
 var signCmd = &cobra.Command{
-	Use:   CMD_KEY,
+	Use:   cmdKey,
 	Short: "Assina um documento",
 	Run: func(cmd *cobra.Command, args []string) {
 		runSign()
@@ -25,11 +22,6 @@ var signCmd = &cobra.Command{
 }
 
 func runSign() {
-	// Validação de existência do assinador
-	if _, err := os.Stat(JAR_PATH); os.IsNotExist(err) {
-		internal.PrintError("Erro: O Assinador não foi encontrado em '%s'", JAR_PATH)
-		return
-	}
 
 	// Leitura das informações do arquivo passado nos parâmetros
 	fileInfo, err := os.Stat(file)
@@ -38,26 +30,14 @@ func runSign() {
 		return
 	}
 
-	// Execução do comando externo
-	output, err := execJavaSigner(string(fileInfo.Name()))
+	// Execução do comando para o assinador
+	output, err := internal.ExecJavaSigner(string(fileInfo.Name()), cmdKey)
 	if err != nil {
 		internal.PrintError("Erro ao executar o assinador: \n%v", err)
 		return
 	}
 
 	fmt.Println(output)
-}
-
-func execJavaSigner(fileName string) (string, error) {
-	javaCmd := exec.Command("java", JAR_PATH, CMD_KEY, fileName)
-
-	output, err := javaCmd.CombinedOutput()
-
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-
-	return string(output), nil
 }
 
 func init() {
