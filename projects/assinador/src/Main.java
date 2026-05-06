@@ -14,17 +14,21 @@ public class Main {
             String cmd = args[0];
             String file = args[1];
             
-            if (cmd.contains("sign")) {
-                SignatureService.sign(file);
-            }
-            
-            if (cmd.contains("verify")) {
-                SignatureService.validate(file);
-            }
+            switch (cmd) {
+                case "sign":
+                    SignatureService.sign(file);
+                    break;
 
+                case "validate":
+                    SignatureService.validate(file);
+                    break;
+                    
+                default:
+                    System.out.print(Tint.RED + "Erro: O comando passado para o Assinador não foi reconhecido." + Tint.RESET);   
+            }
+           
         } else {
-            System.out.print(
-                Tint.RED + "Erro: Nenhum argumento foi passado para o Assinador." + Tint.RESET);
+            System.out.print(Tint.RED + "Erro: Nenhum argumento foi passado para o Assinador." + Tint.RESET);
         }
     }
 }
