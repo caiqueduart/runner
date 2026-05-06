@@ -31,15 +31,15 @@ func runSign() {
 		return
 	}
 
-	// Leitura do arquivo passado nos parâmetros
-	content, err := os.ReadFile(file)
+	// Leitura das informações do arquivo passado nos parâmetros
+	fileInfo, err := os.Stat(file)
 	if err != nil {
 		internal.PrintError("Erro ao ler o arquivo '%s': \n%v", file, err)
 		return
 	}
 
 	// Execução do comando externo
-	output, err := execJavaSigner(string(content))
+	output, err := execJavaSigner(string(fileInfo.Name()))
 	if err != nil {
 		internal.PrintError("Erro ao executar o assinador: \n%v", err)
 		return
@@ -48,8 +48,8 @@ func runSign() {
 	fmt.Println(output)
 }
 
-func execJavaSigner(payload string) (string, error) {
-	javaCmd := exec.Command("java", JAR_PATH, CMD_KEY, payload)
+func execJavaSigner(fileName string) (string, error) {
+	javaCmd := exec.Command("java", JAR_PATH, CMD_KEY, fileName)
 
 	output, err := javaCmd.CombinedOutput()
 

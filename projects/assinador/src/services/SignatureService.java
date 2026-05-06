@@ -3,15 +3,15 @@ package src.services;
 public class SignatureService {
     SignatureService() {}
 
-    public static void sign(String file) {
-        String assinaturaSimulada = "SIMULATED_SIG_" + file.hashCode();
+    public static void sign(String fileName) {
+        String assinaturaSimulada = "SIGN-" + Math.abs(fileName.hashCode());
 
         System.out.println(
-            "\n\"" + Tint.GREEN + file + Tint.RESET + "\"" + 
-            " gerou código o de assinatura " 
-            + "\"" + Tint.GREEN + assinaturaSimulada + Tint.RESET + "\"."
+            "O Arquivo \'" + Tint.GREEN + fileName + Tint.RESET + "\' " + 
+            "gerou o código de assinatura" 
+            + " \'" + Tint.GREEN + assinaturaSimulada + Tint.RESET + "\'."
         );
     }
 
-    public static void validate(String file) {}
+    public static void validate(String fileName) {}
 }
