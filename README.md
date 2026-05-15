@@ -20,30 +20,29 @@ Documentação em desenvolvimento...
 ```
 runner/
 ├── .github/
-│   └── workflows/              # Workflows do GitHub Actions (CI/CD)
+│   └── workflows/                  # Workflows do GitHub Actions (CI/CD)
 │
-├── docs/                       # Documentações
+├── docs/                           # Documentações
 │
 └── projects/
-    ├── cli/                    # Código-fonte das aplicações Go (CLIs)
-    │   ├── assinatura/         # CLI de assinatura
-    │   │   ├── cmd/            # Comandos disponibilizados pelo CLI
-    │   │   └── main.go
+    ├── assinador/                  # Código-fonte da aplicação Assinador (Java)
     │   │
-    │   ├── simulador/          # CLI do simulador
-    │   │   ├── cmd/            # Comandos disponibilizados pelo CLI
-    │   │   └── main.go
-    │   │
-    │   ├── go.mod              # Definição do módulo Go principal
-    │   └── go.sum              # Checksums das dependências Go
+    │   ├── src/
+    │   │   ├── services/           # Lógica de validação e simulação
+    │   │   └── Main.java
+    │   └── pom.xml                 # Arquivo de configuração do Maven
     │
-    └── assinador-java/         # Código-fonte da aplicação Assinador (Java)
-       ├── dist/                # Arquivos compilados .jar
-       │
-       ├── src/
-       │   ├── main/java/       # Lógica de validação e simulação
-       │   └── test/java/       # Testes unitários e de integração
-       │
-       ├── pom.xml              # Arquivo de configuração do Maven
-       └── README.md            # Instruções específicas do projeto Java
+    └── cli/                        # Código-fonte das aplicações Go (CLIs)
+        ├── assinatura/             # CLI de assinatura
+        │   ├── cmd/                # Comandos disponibilizados pelo CLI
+        │   ├── internal/           # Códigos privados da cli
+        │   └── main.go
+        │
+        ├── simulador/              # CLI do simulador
+        │   ├── cmd/                # Comandos disponibilizados pelo CLI
+        │   ├── internal/           # Códigos privados da cli
+        │   └── main.go
+        │
+        ├── go.mod                  # Definição do módulo Go principal
+        └── go.sum                  # Checksums das dependências Go
 ```
