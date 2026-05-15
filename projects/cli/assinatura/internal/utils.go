@@ -15,8 +15,9 @@ import (
 	"strings"
 )
 
-// Caminho para o arquivo Main.java (temporário)
-const jarPath = "../../assinador/src/Main.java"
+// CompatibleAssinadorVersion define a versão do JAR que esta CLI sabe operar.
+const CompatibleAssinadorVersion = "0.1.4"
+const RepoPath = "caiqueduart/runner"
 
 func PrintError(format string, a ...any) {
 	fmt.Printf(ColorRed+format+ColorReset, a...)
@@ -55,22 +56,22 @@ func GetJavaPath(binName string) (string, error) {
 	}
 
 	// Se não encontrou (ou versão errada), inicia download
-	if binName == "java" || binName == "java.exe" || binName == "javac" || binName == "javac.exe" {
+	if binName == "java" || binName == "java.exe" {
 		fmt.Println("JDK 21 não encontrado ou versão incompatível.")
-		fmt.Println("Iniciando download automático do JDK 21...")
+		fmt.Println("Iniciando download do JDK 21...")
 
 		if err := DownloadJava21(managedDir); err != nil {
-			return "", fmt.Errorf("falha ao baixar JDK 21: %w", err)
+			return "", fmt.Errorf("Falha ao baixar JDK 21: %w", err)
 		}
 
-		fmt.Println("Download e instalação do JDK 21 concluídos com sucesso.")
+		fmt.Println("Download e instalação do JDK 21 concluídos.")
 
 		if _, err := os.Stat(managedBin); err == nil {
 			return managedBin, nil
 		}
 	}
 
-	return "", fmt.Errorf("binário %s não encontrado", binName)
+	return "", fmt.Errorf("Binário %s não encontrado", binName)
 }
 
 // isJava21 verifica se o binário java informado é da versão 21.
@@ -81,6 +82,65 @@ func isJava21(javaPath string) bool {
 		return false
 	}
 	return strings.Contains(string(output), "version \"21")
+}
+
+// DownloadAssinadorJar baixa o JAR do assinador de uma release do GitHub.
+func DownloadAssinadorJar(targetPath string) error {
+	tag := "assinador-v" + CompatibleAssinadorVersion
+	apiUrl := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", RepoPath, tag)
+
+	resp, err := http.Get(apiUrl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Falha ao consultar release no GitHub: status %d", resp.StatusCode)
+	}
+
+	var release struct {
+		Assets []struct {
+			Name        string `json:"name"`
+			DownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return err
+	}
+
+	var jarDownloadURL string
+	expectedName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
+	for _, asset := range release.Assets {
+		if asset.Name == expectedName {
+			jarDownloadURL = asset.DownloadURL
+			break
+		}
+	}
+
+	if jarDownloadURL == "" {
+		return fmt.Errorf("Arquivo %s não encontrado na release %s", expectedName, tag)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return err
+	}
+
+	out, err := os.Create(targetPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	resp, err = http.Get(jarDownloadURL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 // DownloadJava21 baixa e extrai o JDK 21 da Adoptium.
@@ -220,52 +280,26 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 		return "", err
 	}
 
-	javacPath, err := GetJavaPath("javac")
-	if err != nil {
-		return "", err
-	}
+	// Local do JAR gerenciado
+	home, _ := os.UserHomeDir()
+	jarDir := filepath.Join(home, ".hubsaude", "bin")
+	jarName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
+	localJarPath := filepath.Join(jarDir, jarName)
 
-	// Verifica a existência do código fonte
-	if _, err := os.Stat(jarPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("arquivo do Assinador não encontrado em: %s", jarPath)
-	}
-
-	// Preparação do Assinador
-	fmt.Println("Preparando o Assinador...")
-
-	absJarPath, _ := filepath.Abs(jarPath)
-	javaProjectRoot := filepath.Dir(filepath.Dir(absJarPath))
-
-	// Criamos um diretório 'bin' temporário para as classes compiladas
-	binDir := filepath.Join(javaProjectRoot, "bin")
-	os.MkdirAll(binDir, 0755)
-
-	// Listamos os fontes necessários recursivamente a partir de 'src'
-	var sources []string
-	err = filepath.Walk(filepath.Join(javaProjectRoot, "src"), func(path string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() && strings.HasSuffix(path, ".java") {
-			sources = append(sources, path)
-			return nil
+	// Verifica se o JAR existe, se não, baixa
+	if _, err := os.Stat(localJarPath); os.IsNotExist(err) {
+		fmt.Printf("Assinador v%s não encontrado localmente.\n", CompatibleAssinadorVersion)
+		fmt.Println("Iniciando download do Assinador...")
+		if err := DownloadAssinadorJar(localJarPath); err != nil {
+			return "", fmt.Errorf("falha ao baixar Assinador: %w", err)
 		}
-		return err
-	})
-
-	if len(sources) == 0 {
-		return "", fmt.Errorf("nenhum arquivo .java encontrado em %s", filepath.Join(javaProjectRoot, "src"))
-	}
-
-	// Compilação
-	compileCmd := exec.Command(javacPath, append([]string{"-d", binDir}, sources...)...)
-	if output, err := compileCmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("erro na preparação do Assinador: %w\n%s", err, string(output))
+		fmt.Println("Download do Assinador concluído.")
 	}
 
 	// Execução
 	fmt.Println("Executando Assinador...")
 
-	javaCmd := exec.Command(javaPath, "-cp", binDir, "src.Main", cmdKey, fileName)
-	javaCmd.Dir = javaProjectRoot
-
+	javaCmd := exec.Command(javaPath, "-jar", localJarPath, cmdKey, fileName)
 	output, err := javaCmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("erro na execução: %w\n%s", err, string(output))
