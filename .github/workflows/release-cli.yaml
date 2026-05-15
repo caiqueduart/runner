@@ -55,7 +55,7 @@ jobs:
 
             - name: Compilar (Build)
               run: |
-                  BINARY_NAME=assinatura-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  BINARY_NAME=assinatura-cli-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
                   if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
 
                   echo "FINAL_BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
@@ -73,7 +73,7 @@ jobs:
               uses: softprops/action-gh-release@v2
               if: env.TAG_EXISTS == 'false'
               with:
-                  tag_name: ${{ env.VERSION }}
+                  tag_name: 'assinatura-cli-${{ env.VERSION }}'
                   name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
                   files: |
