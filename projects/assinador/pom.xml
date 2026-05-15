@@ -59,7 +59,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>assinador</finalName>
+                            <finalName>assinador-v${project.version}</finalName>
                         </configuration>
                     </execution>
                 </executions>
