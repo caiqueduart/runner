@@ -4,6 +4,8 @@ on:
     push:
         branches:
             - main
+        paths:
+            - 'projects/cli/**'
 
 permissions:
     contents: write
