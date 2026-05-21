@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +23,26 @@ const RepoPath = "caiqueduart/runner"
 
 func PrintError(format string, a ...any) {
 	fmt.Printf(ColorRed+format+ColorReset, a...)
+}
+
+// checkFileSHA256 calcula o SHA-256 de um arquivo e compara com o esperado.
+func checkFileSHA256(filePath string, expectedDigest string) (bool, error) {
+	// O digest do GitHub vem no formato "sha256:HASH"
+	expectedHash := strings.TrimPrefix(expectedDigest, "sha256:")
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return false, err
+	}
+
+	calculatedHash := hex.EncodeToString(hash.Sum(nil))
+	return strings.EqualFold(calculatedHash, expectedHash), nil
 }
 
 // GetJavaPath localiza ou baixa o JDK 21 e retorna o caminho para o binário solicitado.
@@ -103,6 +125,7 @@ func DownloadAssinadorJar(targetPath string) error {
 		Assets []struct {
 			Name        string `json:"name"`
 			DownloadURL string `json:"browser_download_url"`
+			Digest      string `json:"digest"`
 		} `json:"assets"`
 	}
 
@@ -111,10 +134,12 @@ func DownloadAssinadorJar(targetPath string) error {
 	}
 
 	var jarDownloadURL string
+	var expectedDigest string
 	expectedName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
 	for _, asset := range release.Assets {
 		if asset.Name == expectedName {
 			jarDownloadURL = asset.DownloadURL
+			expectedDigest = asset.Digest
 			break
 		}
 	}
@@ -140,7 +165,27 @@ func DownloadAssinadorJar(targetPath string) error {
 	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
-	return err
+	out.Close()
+
+	if err != nil {
+		return err
+	}
+
+	// Validação de Integridade (SHA256)
+	if expectedDigest != "" {
+		fmt.Println("Verificando integridade do arquivo...")
+		isValid, err := checkFileSHA256(targetPath, expectedDigest)
+		if err != nil {
+			return fmt.Errorf("Erro ao verificar SHA256: %w", err)
+		}
+		if !isValid {
+			os.Remove(targetPath)
+			return fmt.Errorf("ERRO DE SEGURANÇA: O SHA256 do arquivo baixado não coincide com o esperado!")
+		}
+		fmt.Println("Integridade confirmada (SHA256 OK).")
+	}
+
+	return nil
 }
 
 // DownloadJava21 baixa e extrai o JDK 21 da Adoptium.
