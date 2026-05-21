@@ -17,9 +17,9 @@ Este plano detalha as etapas de desenvolvimento do sistema **Runner**, integrand
 - [x] **CLI (Go):** Implementação dos comandos `sign`, `validate` e `version`.
 - [x] **Auto-Provisionamento:** Lógica para baixar e configurar o JDK 21 automaticamente.
 - [x] **Gestão de Artefatos:** Download automático do `assinador.jar` via GitHub Releases.
-- [ ] **Validação de Integridade:** Implementar verificação de SHA256 para arquivos baixados.
+- [x] **Validação de Integridade:** Implementar verificação de SHA256 para arquivos baixados.
 
-### Sprint 3: Modo Servidor e Performance
+### Sprint 3: Modo Servidor
 
 - [ ] **Assinador Server:** Adicionar servidor HTTP ao projeto Java.
 - [ ] **Endpoints:** Criar rotas `POST /sign` e `POST /validate`.
