@@ -14,6 +14,7 @@ public class Main {
             String cmd = args[0];
             String file = args[1];
             
+            
             switch (cmd) {
                 case "sign":
                     SignatureService.sign(file);
