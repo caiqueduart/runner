@@ -135,6 +135,7 @@ func DownloadAssinadorJar(targetPath string) error {
 
 	var jarDownloadURL string
 	var expectedDigest string
+
 	expectedName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
 	for _, asset := range release.Assets {
 		if asset.Name == expectedName {

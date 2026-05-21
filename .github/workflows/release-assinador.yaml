@@ -50,9 +50,11 @@ jobs:
                   fi
 
             - name: Sincronizar versão no pom.xml
+              if: env.TAG_EXISTS == 'false'
               run: mvn versions:set -DnewVersion=${{ env.RAW_VERSION }} -DgenerateBackupPoms=false
 
             - name: Build com Maven
+              if: env.TAG_EXISTS == 'false'
               run: mvn clean package
 
             - name: Upload para Release
