@@ -41,13 +41,13 @@ public class HttpServerService {
             server.createContext("/stop", new StopHandler());
 
             server.start();
-            Tint.logSuccess("ASSINATURA SERVIDOR", "Online na porta " + effectivePort);
-            Tint.logInfo("ASSINATURA SERVIDOR", "Auto-desligamento em " + effectiveTimeout + "m.");
+            Tint.logFeedback("ASSINATURA SERVIDOR", "Online na porta " + effectivePort);
+            Tint.logFeedback("ASSINATURA SERVIDOR", "Auto-desligamento em " + effectiveTimeout + "m.");
 
             startTimeoutChecker(effectiveTimeout);
 
         } catch (IOException e) {
-            Tint.logError("ASSINATURA SERVIDOR", "Erro ao iniciar: " + e.getMessage());
+            Tint.logFeedback("ASSINATURA SERVIDOR", "Erro ao iniciar: " + e.getMessage());
         }
     }
 
@@ -55,11 +55,11 @@ public class HttpServerService {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
             long inactiveTime = System.currentTimeMillis() - lastRequestTime.get();
-            if (inactiveTime > TimeUnit.MINUTES.toMillis(timeoutMinutes)) {
-                Tint.logWarn("ASSINATURA SERVIDOR", "Encerrando por inatividade...");
+            if (inactiveTime >= timeoutMillis) {
+                Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrando por inatividade...");
                 stopServer();
             }
-        }, 1, 1, TimeUnit.MINUTES);
+        }, 5, 5, TimeUnit.SECONDS);
     }
 
     private static void updateLastRequestTime() {
@@ -67,14 +67,17 @@ public class HttpServerService {
     }
 
     private static void stopServer() {
-        if (server != null) {
-            server.stop(0);
+        try {
+            if (scheduler != null) {
+                scheduler.shutdownNow();
+            }
+            if (server != null) {
+                server.stop(0);
+            }
+        } finally {
+            Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrado.");
+            System.exit(0);
         }
-        if (scheduler != null) {
-            scheduler.shutdownNow();
-        }
-        Tint.logSuccess("ASSINATURA SERVIDOR", "Encerrado.");
-        System.exit(0);
     }
 
     static class SignHandler implements HttpHandler {
@@ -85,6 +88,7 @@ public class HttpServerService {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
+            // ... (rest of handle)
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             String fileName = body.trim();
@@ -124,8 +128,6 @@ public class HttpServerService {
     static class HealthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            updateLastRequestTime();
-            
             long now = System.currentTimeMillis();
             long uptimeSeconds = (now - startTime) / 1000;
             long remainingMillis = timeoutMillis - (now - lastRequestTime.get());
