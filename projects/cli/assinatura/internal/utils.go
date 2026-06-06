@@ -20,7 +20,7 @@ import (
 )
 
 // CompatibleAssinadorVersion define a versão do JAR que esta CLI sabe operar.
-const CompatibleAssinadorVersion = "0.1.5"
+const CompatibleAssinadorVersion = "0.1.6"
 const RepoPath = "caiqueduart/runner"
 
 func PrintError(format string, a ...any) {
