@@ -3,27 +3,25 @@ package src.services;
 public class SignatureService {
     SignatureService() {}
 
-    public static void sign(String fileName) {
-        String simulatetdSign = SignatureService._makeSimulatedSignCode(fileName);
-
-        System.out.println(
-            "O Arquivo \'" + Tint.GREEN + fileName + Tint.RESET + "\' " + 
-            "gerou o código de assinatura" 
-            + " \'" + Tint.GREEN + simulatetdSign + Tint.RESET + "\'."
-        );
+    public static String sign(String fileName) {
+        String code = makeSimulatedSignCode(fileName);
+        return formatSignatureMessage(fileName, code);
     }
 
-    public static void validate(String fileName) {
-        String simulatetdSign = SignatureService._makeSimulatedSignCode(fileName);
-
-        System.out.println(
-            "O Arquivo \'" + Tint.GREEN + fileName + Tint.RESET + "\' " + 
-            "está assinado sob o código" 
-            + " \'" + Tint.GREEN + simulatetdSign + Tint.RESET + "\'."
-        );
+    public static String validate(String fileName) {
+        String code = makeSimulatedSignCode(fileName);
+        return formatValidationMessage(fileName, code);
     }
 
-    private static String _makeSimulatedSignCode(String fileName) {
+    public static String formatSignatureMessage(String fileName, String signatureCode) {
+        return "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' gerou o código de assinatura '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
+    }
+
+    public static String formatValidationMessage(String fileName, String signatureCode) {
+        return "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' está assinado sob o código '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
+    }
+
+    public static String makeSimulatedSignCode(String fileName) {
         return "SIGN-" + Math.abs(fileName.hashCode());
     }
 }

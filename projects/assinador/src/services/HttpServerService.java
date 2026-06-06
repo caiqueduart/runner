@@ -82,7 +82,6 @@ public class HttpServerService {
             }
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            // Simples extração de parâmetro (em um cenário real usaríamos JSON)
             String fileName = body.trim();
             
             if (fileName.isEmpty()) {
@@ -90,8 +89,7 @@ public class HttpServerService {
                 return;
             }
 
-            String signature = SignatureService.makeSimulatedSignCode(fileName);
-            String response = "O Arquivo '" + fileName + "' gerou o código de assinatura '" + signature + "'.";
+            String response = SignatureService.sign(fileName);
             sendResponse(exchange, response, 200);
         }
     }
@@ -113,8 +111,7 @@ public class HttpServerService {
                 return;
             }
 
-            String signature = SignatureService.makeSimulatedSignCode(fileName);
-            String response = "O Arquivo '" + fileName + "' está assinado sob o código '" + signature + "'.";
+            String response = SignatureService.validate(fileName);
             sendResponse(exchange, response, 200);
         }
     }

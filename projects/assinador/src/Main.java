@@ -1,6 +1,7 @@
 package src;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import src.services.HttpServerService;
 import src.services.SignatureService;
 import src.services.Tint;
 
@@ -12,15 +13,36 @@ public class Main {
         if (args.length > 0) {
 
             String cmd = args[0];
-            String file = args[1];
             
             switch (cmd) {
+                case "server":
+                    int port = 8080;
+                    long timeout = 10;
+                    
+                    for (int i = 1; i < args.length; i++) {
+                        if (args[i].equals("--port") && i + 1 < args.length) {
+                            port = Integer.parseInt(args[++i]);
+                        } else if (args[i].equals("--timeout") && i + 1 < args.length) {
+                            timeout = Long.parseLong(args[++i]);
+                        }
+                    }
+                    HttpServerService.start(port, timeout);
+                    break;
+
                 case "sign":
-                    SignatureService.sign(file);
+                    if (args.length < 2) {
+                        System.out.print(Tint.RED + "Erro: Nome do arquivo não fornecido para o comando sign." + Tint.RESET);
+                        return;
+                    }
+                    System.out.println(SignatureService.sign(args[1]));
                     break;
 
                 case "validate":
-                    SignatureService.validate(file);
+                    if (args.length < 2) {
+                        System.out.print(Tint.RED + "Erro: Nome do arquivo não fornecido para o comando validate." + Tint.RESET);
+                        return;
+                    }
+                    System.out.println(SignatureService.validate(args[1]));
                     break;
 
                 default:
