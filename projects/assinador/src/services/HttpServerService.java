@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class HttpServerService {
     private static final int DEFAULT_PORT = 8080;
-    private static final long DEFAULT_TIMEOUT_MINUTES = 10;
+    private static final long DEFAULT_TIMEOUT_MINUTES = 5;
     
     private static HttpServer server;
     private static ScheduledExecutorService scheduler;
@@ -149,6 +149,7 @@ public class HttpServerService {
             new Thread(() -> {
                 try {
                     Thread.sleep(500);
+                    Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrando...");
                     stopServer();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

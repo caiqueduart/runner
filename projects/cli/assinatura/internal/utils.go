@@ -20,7 +20,7 @@ import (
 )
 
 // CompatibleAssinadorVersion define a versão do JAR que esta CLI sabe operar.
-const CompatibleAssinadorVersion = "1.0.3"
+const CompatibleAssinadorVersion = "1.0.4"
 const RepoPath = "caiqueduart/runner"
 
 func PrintError(format string, a ...any) {
@@ -109,6 +109,7 @@ func isJava21(javaPath string) bool {
 
 // DownloadAssinadorJar baixa o JAR do assinador de uma release do GitHub.
 func DownloadAssinadorJar(targetPath string) error {
+	LogFeedback("ASSINATURA CONFIG", "JAR não encontrado. Baixando...")
 	tag := "assinador-v" + CompatibleAssinadorVersion
 	apiUrl := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", RepoPath, tag)
 
@@ -175,7 +176,7 @@ func DownloadAssinadorJar(targetPath string) error {
 
 	// Validação de Integridade (SHA256)
 	if expectedDigest != "" {
-		LogFeedback("ASSINATURA CONFIG", "Verificando integridade...")
+		LogFeedback("ASSINATURA CONFIG", "Validando integridade...")
 		isValid, err := checkFileSHA256(targetPath, expectedDigest)
 		if err != nil {
 			return fmt.Errorf("erro ao verificar SHA256: %w", err)
@@ -367,7 +368,7 @@ func EnsureServerRunning() error {
 	}
 
 	// Inicia o servidor em background
-	cmd := exec.Command(javaPath, "-jar", localJarPath, "server", "--port", "8080", "--timeout", "5")
+	cmd := exec.Command(javaPath, "-jar", localJarPath, "server", "--port", "8080", "--timeout", "1")
 
 	// Configuração para Windows: desvincular do processo pai para persistir
 	if runtime.GOOS == "windows" {
