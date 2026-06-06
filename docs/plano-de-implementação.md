@@ -21,14 +21,14 @@ Este plano detalha as etapas de desenvolvimento do sistema **Runner**, integrand
 
 ### Sprint 3: Modo Servidor
 
-- [ ] **Assinador Server:** Adicionar servidor HTTP ao projeto Java.
-- [ ] **Endpoints:** Criar rotas `POST /sign` e `POST /validate`.
-- [ ] **CLI Server Mode:**
-    - [ ] Lógica para detectar servidor ativo.
-    - [ ] Inicialização em background.
-    - [ ] Cliente HTTP em Go para comunicação com o servidor.
-- [ ] **Comando `stop`:** Implementar encerramento gracioso do servidor.
-- [ ] **Inatividade:** Implementar `--timeout` para auto-desligamento do Java.
+- [x] **Assinador Server:** Adicionar servidor HTTP ao projeto Java.
+- [x] **Endpoints:** Criar rotas `POST /sign` e `POST /validate`.
+- [x] **CLI Server Mode:**
+    - [x] Lógica para detectar servidor ativo.
+    - [x] Inicialização em background.
+    - [x] Cliente HTTP em Go para comunicação com o servidor.
+- [x] **Comando `stop`:** Implementar encerramento gracioso do servidor.
+- [x] **Inatividade:** Implementar `--timeout` para auto-desligamento do Java.
 
 ### Sprint 4: Simulador e Integração PKCS#11
 
