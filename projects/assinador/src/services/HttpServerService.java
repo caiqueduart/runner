@@ -18,11 +18,16 @@ public class HttpServerService {
     
     private static HttpServer server;
     private static ScheduledExecutorService scheduler;
+    private static long startTime;
+    private static long timeoutMillis;
     private static final AtomicLong lastRequestTime = new AtomicLong(System.currentTimeMillis());
 
     public static void start(int port, long timeoutMinutes) {
         int effectivePort = port > 0 ? port : DEFAULT_PORT;
         long effectiveTimeout = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
+        
+        startTime = System.currentTimeMillis();
+        timeoutMillis = TimeUnit.MINUTES.toMillis(effectiveTimeout);
 
         try {
             server = HttpServer.create(new InetSocketAddress(effectivePort), 0);
@@ -120,7 +125,18 @@ public class HttpServerService {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             updateLastRequestTime();
-            sendResponse(exchange, "OK", 200);
+            
+            long now = System.currentTimeMillis();
+            long uptimeSeconds = (now - startTime) / 1000;
+            long remainingMillis = timeoutMillis - (now - lastRequestTime.get());
+            long remainingSeconds = Math.max(0, remainingMillis / 1000);
+            
+            String response = String.format(
+                "Status: OK\nUptime: %ds\nAuto-shutdown em: %ds",
+                uptimeSeconds, remainingSeconds
+            );
+            
+            sendResponse(exchange, response, 200);
         }
     }
 
