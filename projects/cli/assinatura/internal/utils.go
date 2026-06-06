@@ -81,13 +81,13 @@ func GetJavaPath(binName string) (string, error) {
 
 	// Se não encontrou (ou versão errada), inicia download
 	if binName == "java" || binName == "java.exe" {
-		LogWarn("ASSINATURA CONFIG", "JDK 21 não encontrado. Iniciando download...")
+		LogFeedback("ASSINATURA CONFIG", "JDK 21 não encontrado. Iniciando download...")
 
 		if err := DownloadJava21(managedDir); err != nil {
 			return "", fmt.Errorf("falha ao baixar JDK 21: %w", err)
 		}
 
-		LogSuccess("ASSINATURA CONFIG", "JDK 21 instalado com sucesso.")
+		LogFeedback("ASSINATURA CONFIG", "JDK 21 instalado com sucesso.")
 
 		if _, err := os.Stat(managedBin); err == nil {
 			return managedBin, nil
@@ -175,7 +175,7 @@ func DownloadAssinadorJar(targetPath string) error {
 
 	// Validação de Integridade (SHA256)
 	if expectedDigest != "" {
-		LogInfo("ASSINATURA CONFIG", "Verificando integridade...")
+		LogFeedback("ASSINATURA CONFIG", "Verificando integridade...")
 		isValid, err := checkFileSHA256(targetPath, expectedDigest)
 		if err != nil {
 			return fmt.Errorf("erro ao verificar SHA256: %w", err)
@@ -184,7 +184,7 @@ func DownloadAssinadorJar(targetPath string) error {
 			os.Remove(targetPath)
 			return fmt.Errorf("ERRO DE SEGURANÇA: SHA256 não coincide!")
 		}
-		LogSuccess("ASSINATURA CONFIG", "Integridade OK.")
+		LogFeedback("ASSINATURA CONFIG", "Integridade OK.")
 	}
 
 	return nil
@@ -219,7 +219,7 @@ func DownloadJava21(targetDir string) error {
 	}
 
 	downloadUrl := releases[0]["binaries"].([]interface{})[0].(map[string]interface{})["package"].(map[string]interface{})["link"].(string)
-	LogInfo("ASSINATURA CONFIG", "Baixando JDK...")
+	LogFeedback("ASSINATURA CONFIG", "Baixando JDK...")
 
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return err
@@ -245,7 +245,7 @@ func DownloadJava21(targetDir string) error {
 		return err
 	}
 
-	LogInfo("ASSINATURA CONFIG", "Extraindo arquivos...")
+	LogFeedback("ASSINATURA CONFIG", "Extraindo arquivos...")
 	if strings.HasSuffix(downloadUrl, ".zip") {
 		return extractZip(tmpFile, targetDir)
 	}
@@ -348,7 +348,7 @@ func EnsureServerRunning() error {
 		return nil
 	}
 
-	LogInfo("ASSINATURA CONFIG", "Servidor não detectado. Iniciando...")
+	LogFeedback("ASSINATURA CONFIG", "Servidor não detectado. Iniciando...")
 
 	javaPath, err := GetJavaPath("java")
 	if err != nil {
@@ -394,7 +394,7 @@ func EnsureServerRunning() error {
 		resp, err := http.Get("http://localhost:8080/health")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
-			LogSuccess("ASSINATURA SERVIDOR", "Servidor online.")
+			LogFeedback("ASSINATURA SERVIDOR", "Servidor online.")
 			return nil
 		}
 	}
@@ -410,7 +410,7 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 	}
 
 	// Fallback para modo local se falhar ao iniciar o servidor
-	LogWarn("ASSINATURA CONFIG", "Servidor indisponível. Usando modo local...")
+	LogFeedback("ASSINATURA CONFIG", "Servidor indisponível. Usando modo local...")
 
 	javaPath, err := GetJavaPath("java")
 	if err != nil {
