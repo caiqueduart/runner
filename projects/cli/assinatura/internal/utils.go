@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // CompatibleAssinadorVersion define a versão do JAR que esta CLI sabe operar.
@@ -319,36 +321,118 @@ func extractTarGz(src, dest string) error {
 	return nil
 }
 
-func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
-	// Prepara o ambiente Java
-	javaPath, err := GetJavaPath("java")
+func CallJavaServer(endpoint string, data string) (string, error) {
+	url := fmt.Sprintf("http://localhost:8080/%s", endpoint)
+	resp, err := http.Post(url, "text/plain", strings.NewReader(data))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	// Local do JAR gerenciado
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("servidor retornou erro %d: %s", resp.StatusCode, string(body))
+	}
+
+	return string(body), nil
+}
+
+func EnsureServerRunning() error {
+	// Verifica se já está rodando
+	resp, err := http.Get("http://localhost:8080/health")
+	if err == nil && resp.StatusCode == http.StatusOK {
+		resp.Body.Close()
+		return nil
+	}
+
+	fmt.Println("Servidor não detectado. Iniciando servidor...")
+
+	javaPath, err := GetJavaPath("java")
+	if err != nil {
+		return err
+	}
+
 	home, _ := os.UserHomeDir()
 	jarDir := filepath.Join(home, ".hubsaude", "bin")
 	jarName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
 	localJarPath := filepath.Join(jarDir, jarName)
 
-	// Verifica se o JAR existe, se não, baixa
 	if _, err := os.Stat(localJarPath); os.IsNotExist(err) {
-		fmt.Printf("Assinador v%s não encontrado localmente.\n", CompatibleAssinadorVersion)
-		fmt.Println("Iniciando download do Assinador...")
 		if err := DownloadAssinadorJar(localJarPath); err != nil {
-			return "", fmt.Errorf("falha ao baixar Assinador: %w", err)
+			return err
 		}
-		fmt.Println("Download do Assinador concluído.")
 	}
 
-	// Execução
-	fmt.Println("Executando Assinador...")
+	// Inicia o servidor em background
+	cmd := exec.Command(javaPath, "-jar", localJarPath, "server", "--port", "8080", "--timeout", "5")
+
+	// Configuração para Windows: desvincular do processo pai para persistir
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: 0x01000000 | // CREATE_BREAKAWAY_FROM_JOB
+				0x00000008 | // DETACHED_PROCESS
+				0x00000200, // CREATE_NEW_PROCESS_GROUP
+		}
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("falha ao iniciar servidor: %w", err)
+	}
+
+	// Libera o rastreio do processo para que ele continue independente
+	if cmd.Process != nil {
+		cmd.Process.Release()
+	}
+
+	// Aguarda o servidor subir (tentativas por 5 segundos)
+	for i := 0; i < 10; i++ {
+		time.Sleep(500 * time.Millisecond)
+		resp, err := http.Get("http://localhost:8080/health")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			fmt.Println("Servidor iniciado com sucesso.")
+			return nil
+		}
+	}
+
+	return fmt.Errorf("timeout ao aguardar o servidor subir")
+}
+
+func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
+	// Tenta usar o modo servidor
+	err := EnsureServerRunning()
+	if err == nil {
+		return CallJavaServer(cmdKey, fileName)
+	}
+
+	// Fallback para modo local se falhar ao iniciar o servidor
+	fmt.Printf("Falha ao usar assinador em modo servidor (%v). Usando modo local...\n", err)
+
+	javaPath, err := GetJavaPath("java")
+	if err != nil {
+		return "", err
+	}
+
+	home, _ := os.UserHomeDir()
+	jarDir := filepath.Join(home, ".hubsaude", "bin")
+	jarName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
+	localJarPath := filepath.Join(jarDir, jarName)
+
+	if _, err := os.Stat(localJarPath); os.IsNotExist(err) {
+		if err := DownloadAssinadorJar(localJarPath); err != nil {
+			return "", err
+		}
+	}
 
 	javaCmd := exec.Command(javaPath, "-jar", localJarPath, cmdKey, fileName)
 	output, err := javaCmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("erro na execução: %w\n%s", err, string(output))
+		return "", fmt.Errorf("erro na execução local: %w\n%s", err, string(output))
 	}
 
 	return string(output), nil
