@@ -14,11 +14,11 @@ public class SignatureService {
     }
 
     public static String formatSignatureMessage(String fileName, String signatureCode) {
-        return "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' gerou o código de assinatura '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
+        return Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' gerou o código de assinatura '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
     }
 
     public static String formatValidationMessage(String fileName, String signatureCode) {
-        return "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' está assinado sob o código '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
+        return Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' está assinado sob o código '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
     }
 
     public static String makeSimulatedSignCode(String fileName) {

@@ -81,21 +81,20 @@ func GetJavaPath(binName string) (string, error) {
 
 	// Se não encontrou (ou versão errada), inicia download
 	if binName == "java" || binName == "java.exe" {
-		fmt.Println("JDK 21 não encontrado ou versão incompatível.")
-		fmt.Println("Iniciando download do JDK 21...")
+		LogWarn("ASSINATURA CONFIG", "JDK 21 não encontrado. Iniciando download...")
 
 		if err := DownloadJava21(managedDir); err != nil {
-			return "", fmt.Errorf("Falha ao baixar JDK 21: %w", err)
+			return "", fmt.Errorf("falha ao baixar JDK 21: %w", err)
 		}
 
-		fmt.Println("Download e instalação do JDK 21 concluídos.")
+		LogSuccess("ASSINATURA CONFIG", "JDK 21 instalado com sucesso.")
 
 		if _, err := os.Stat(managedBin); err == nil {
 			return managedBin, nil
 		}
 	}
 
-	return "", fmt.Errorf("Binário %s não encontrado", binName)
+	return "", fmt.Errorf("binário %s não encontrado", binName)
 }
 
 // isJava21 verifica se o binário java informado é da versão 21.
@@ -120,7 +119,7 @@ func DownloadAssinadorJar(targetPath string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Falha ao consultar release no GitHub: status %d", resp.StatusCode)
+		return fmt.Errorf("falha ao consultar release no GitHub: status %d", resp.StatusCode)
 	}
 
 	var release struct {
@@ -148,7 +147,7 @@ func DownloadAssinadorJar(targetPath string) error {
 	}
 
 	if jarDownloadURL == "" {
-		return fmt.Errorf("Arquivo %s não encontrado na release %s", expectedName, tag)
+		return fmt.Errorf("arquivo %s não encontrado na release %s", expectedName, tag)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
@@ -176,16 +175,16 @@ func DownloadAssinadorJar(targetPath string) error {
 
 	// Validação de Integridade (SHA256)
 	if expectedDigest != "" {
-		fmt.Println("Verificando integridade do arquivo...")
+		LogInfo("ASSINATURA CONFIG", "Verificando integridade...")
 		isValid, err := checkFileSHA256(targetPath, expectedDigest)
 		if err != nil {
-			return fmt.Errorf("Erro ao verificar SHA256: %w", err)
+			return fmt.Errorf("erro ao verificar SHA256: %w", err)
 		}
 		if !isValid {
 			os.Remove(targetPath)
-			return fmt.Errorf("ERRO DE SEGURANÇA: O SHA256 do arquivo baixado não coincide com o esperado!")
+			return fmt.Errorf("ERRO DE SEGURANÇA: SHA256 não coincide!")
 		}
-		fmt.Println("Integridade confirmada (SHA256 OK).")
+		LogSuccess("ASSINATURA CONFIG", "Integridade OK.")
 	}
 
 	return nil
@@ -220,7 +219,7 @@ func DownloadJava21(targetDir string) error {
 	}
 
 	downloadUrl := releases[0]["binaries"].([]interface{})[0].(map[string]interface{})["package"].(map[string]interface{})["link"].(string)
-	fmt.Printf("Baixando JDK de: %s\n", downloadUrl)
+	LogInfo("ASSINATURA CONFIG", "Baixando JDK...")
 
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return err
@@ -246,7 +245,7 @@ func DownloadJava21(targetDir string) error {
 		return err
 	}
 
-	fmt.Println("Extraindo arquivos...")
+	LogInfo("ASSINATURA CONFIG", "Extraindo arquivos...")
 	if strings.HasSuffix(downloadUrl, ".zip") {
 		return extractZip(tmpFile, targetDir)
 	}
@@ -349,7 +348,7 @@ func EnsureServerRunning() error {
 		return nil
 	}
 
-	fmt.Println("Servidor não detectado. Iniciando servidor...")
+	LogInfo("ASSINATURA CONFIG", "Servidor não detectado. Iniciando...")
 
 	javaPath, err := GetJavaPath("java")
 	if err != nil {
@@ -395,7 +394,7 @@ func EnsureServerRunning() error {
 		resp, err := http.Get("http://localhost:8080/health")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
-			fmt.Println("Servidor iniciado com sucesso.")
+			LogSuccess("ASSINATURA SERVIDOR", "Servidor online.")
 			return nil
 		}
 	}
@@ -411,7 +410,7 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 	}
 
 	// Fallback para modo local se falhar ao iniciar o servidor
-	fmt.Printf("Falha ao usar assinador em modo servidor (%v). Usando modo local...\n", err)
+	LogWarn("ASSINATURA CONFIG", "Servidor indisponível. Usando modo local...")
 
 	javaPath, err := GetJavaPath("java")
 	if err != nil {

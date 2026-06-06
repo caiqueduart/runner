@@ -36,13 +36,13 @@ public class HttpServerService {
             server.createContext("/stop", new StopHandler());
 
             server.start();
-            System.out.println(Tint.GREEN + "Servidor do Assinador iniciado na porta " + effectivePort + Tint.RESET);
-            System.out.println(Tint.YELLOW + "Timeout de inatividade configurado para " + effectiveTimeout + " minutos." + Tint.RESET);
+            Tint.logSuccess("ASSINATURA SERVIDOR", "Online na porta " + effectivePort);
+            Tint.logInfo("ASSINATURA SERVIDOR", "Auto-desligamento em " + effectiveTimeout + "m.");
 
             startTimeoutChecker(effectiveTimeout);
 
         } catch (IOException e) {
-            System.err.println(Tint.RED + "Erro ao iniciar o servidor: " + e.getMessage() + Tint.RESET);
+            Tint.logError("ASSINATURA SERVIDOR", "Erro ao iniciar: " + e.getMessage());
         }
     }
 
@@ -51,7 +51,7 @@ public class HttpServerService {
         scheduler.scheduleAtFixedRate(() -> {
             long inactiveTime = System.currentTimeMillis() - lastRequestTime.get();
             if (inactiveTime > TimeUnit.MINUTES.toMillis(timeoutMinutes)) {
-                System.out.println(Tint.YELLOW + "Servidor encerrando por inatividade..." + Tint.RESET);
+                Tint.logWarn("ASSINATURA SERVIDOR", "Encerrando por inatividade...");
                 stopServer();
             }
         }, 1, 1, TimeUnit.MINUTES);
@@ -68,7 +68,7 @@ public class HttpServerService {
         if (scheduler != null) {
             scheduler.shutdownNow();
         }
-        System.out.println(Tint.GREEN + "Servidor encerrado." + Tint.RESET);
+        Tint.logSuccess("ASSINATURA SERVIDOR", "Encerrado.");
         System.exit(0);
     }
 

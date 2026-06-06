@@ -31,7 +31,7 @@ public class Main {
 
                 case "sign":
                     if (args.length < 2) {
-                        System.out.print(Tint.RED + "Erro: Nome do arquivo não fornecido para o comando sign." + Tint.RESET);
+                        Tint.logError("ASSINATURA", "Erro: Nome do arquivo não fornecido.");
                         return;
                     }
                     System.out.println(SignatureService.sign(args[1]));
@@ -39,7 +39,7 @@ public class Main {
 
                 case "validate":
                     if (args.length < 2) {
-                        System.out.print(Tint.RED + "Erro: Nome do arquivo não fornecido para o comando validate." + Tint.RESET);
+                        Tint.logError("ASSINATURA", "Erro: Nome do arquivo não fornecido.");
                         return;
                     }
                     System.out.println(SignatureService.validate(args[1]));
@@ -47,11 +47,11 @@ public class Main {
 
                 default:
                     String formatedArgs = String.join(" ", args);
-                    System.out.print(Tint.RED + "Erro: O argumento '" + formatedArgs + "' não foi reconhecido pelo Assinador." + Tint.RESET);   
+                    Tint.logError("ASSINATURA", "Erro: Comando '" + formatedArgs + "' não reconhecido.");
             }
            
         } else {
-            System.out.print(Tint.RED + "Erro: Nenhum argumento foi passado para o Assinador." + Tint.RESET);
+            Tint.logError("ASSINATURA", "Erro: Nenhum argumento passado.");
         }
     }
 }
