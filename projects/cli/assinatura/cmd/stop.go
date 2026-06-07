@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"runner/assinatura/internal"
 
 	"github.com/spf13/cobra"
@@ -16,13 +15,14 @@ var stopCmd = &cobra.Command{
 }
 
 func runStop() {
-	fmt.Println("Encerrando o servidor do assinador...")
-	output, err := internal.CallJavaServer("stop", "")
+	internal.LogFeedback("ASSINATURA SERVIDOR", "Encerrando servidor...")
+	_, err := internal.CallJavaServer("stop", "")
 	if err != nil {
-		fmt.Printf("Aviso: Não foi possível encerrar o servidor (provavelmente já está desligado): %v\n", err)
+		internal.LogFeedback("ASSINATURA SERVIDOR", "Aviso: Servidor já está desligado ou inacessível.")
+		internal.ClearPIDFile()
 		return
 	}
-	fmt.Println(output)
+	internal.ClearPIDFile()
 }
 
 func init() {

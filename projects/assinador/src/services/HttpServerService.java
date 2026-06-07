@@ -145,11 +145,10 @@ public class HttpServerService {
     static class StopHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            sendResponse(exchange, "Encerrando servidor...", 200);
+            sendResponse(exchange, "Sinal de encerramento recebido.", 200);
             new Thread(() -> {
                 try {
                     Thread.sleep(500);
-                    Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrando...");
                     stopServer();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

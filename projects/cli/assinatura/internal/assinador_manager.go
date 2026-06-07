@@ -150,6 +150,7 @@ func savePID(pid int, port string) {
 	os.MkdirAll(filepath.Dir(path), 0755)
 	content := fmt.Sprintf("PID=%d\nPORT=%s\n", pid, port)
 	os.WriteFile(path, []byte(content), 0644)
+	LogFeedback("ASSINATURA CONFIG", "Rastreabilidade registrada (PID: %d, Porta: %s).", pid, port)
 }
 
 func ClearPIDFile() {
