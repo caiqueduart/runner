@@ -6,32 +6,37 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
-	"time"
 )
 
-// CompatibleAssinadorVersion define a versão do JAR que esta CLI sabe operar.
-const CompatibleAssinadorVersion = "1.0.4"
-const RepoPath = "caiqueduart/runner"
+func GetHubSaudeDir() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".hubsaude")
+}
+
+func GetJarPath() string {
+	jarName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
+	return filepath.Join(GetHubSaudeDir(), "bin", jarName)
+}
+
+func GetJDKDir() string {
+	return filepath.Join(GetHubSaudeDir(), "jdk")
+}
+
+func GetPIDFilePath() string {
+	return filepath.Join(GetHubSaudeDir(), "assinador.pid")
+}
 
 func PrintError(format string, a ...any) {
 	fmt.Printf(ColorRed+format+ColorReset, a...)
 }
 
-// checkFileSHA256 calcula o SHA-256 de um arquivo e compara com o esperado.
 func checkFileSHA256(filePath string, expectedDigest string) (bool, error) {
-	// O digest do GitHub vem no formato "sha256:HASH"
 	expectedHash := strings.TrimPrefix(expectedDigest, "sha256:")
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		return false, err
@@ -47,223 +52,14 @@ func checkFileSHA256(filePath string, expectedDigest string) (bool, error) {
 	return strings.EqualFold(calculatedHash, expectedHash), nil
 }
 
-// GetJavaPath localiza ou baixa o JDK 21 e retorna o caminho para o binário solicitado.
-func GetJavaPath(binName string) (string, error) {
-	if runtime.GOOS == "windows" && !strings.HasSuffix(binName, ".exe") {
-		binName += ".exe"
-	}
-
-	// Tenta encontrar no PATH ou no local gerenciado
-	home, _ := os.UserHomeDir()
-	managedDir := filepath.Join(home, ".hubsaude", "jdk")
-	managedBin := filepath.Join(managedDir, "bin", binName)
-
-	// Verifica se o java no PATH é o 21
-	if binName == "java" || binName == "java.exe" {
-		if path, err := exec.LookPath(binName); err == nil {
-			if isJava21(path) {
-				return path, nil
-			}
-		}
-	}
-
-	// Verifica no diretório gerenciado
-	if _, err := os.Stat(managedBin); err == nil {
-		// Se for o java, valida a versão
-		if binName == "java" || binName == "java.exe" {
-			if isJava21(managedBin) {
-				return managedBin, nil
-			}
-		} else {
-			return managedBin, nil
-		}
-	}
-
-	// Se não encontrou (ou versão errada), inicia download
-	if binName == "java" || binName == "java.exe" {
-		LogFeedback("ASSINATURA CONFIG", "JDK 21 não encontrado. Iniciando download...")
-
-		if err := DownloadJava21(managedDir); err != nil {
-			return "", fmt.Errorf("falha ao baixar JDK 21: %w", err)
-		}
-
-		LogFeedback("ASSINATURA CONFIG", "JDK 21 instalado com sucesso.")
-
-		if _, err := os.Stat(managedBin); err == nil {
-			return managedBin, nil
-		}
-	}
-
-	return "", fmt.Errorf("binário %s não encontrado", binName)
-}
-
-// isJava21 verifica se o binário java informado é da versão 21.
-func isJava21(javaPath string) bool {
-	cmd := exec.Command(javaPath, "-version")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(output), "version \"21")
-}
-
-// DownloadAssinadorJar baixa o JAR do assinador de uma release do GitHub.
-func DownloadAssinadorJar(targetPath string) error {
-	LogFeedback("ASSINATURA CONFIG", "JAR não encontrado. Baixando...")
-	tag := "assinador-v" + CompatibleAssinadorVersion
-	apiUrl := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", RepoPath, tag)
-
-	resp, err := http.Get(apiUrl)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("falha ao consultar release no GitHub: status %d", resp.StatusCode)
-	}
-
-	var release struct {
-		Assets []struct {
-			Name        string `json:"name"`
-			DownloadURL string `json:"browser_download_url"`
-			Digest      string `json:"digest"`
-		} `json:"assets"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return err
-	}
-
-	var jarDownloadURL string
-	var expectedDigest string
-
-	expectedName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
-	for _, asset := range release.Assets {
-		if asset.Name == expectedName {
-			jarDownloadURL = asset.DownloadURL
-			expectedDigest = asset.Digest
-			break
-		}
-	}
-
-	if jarDownloadURL == "" {
-		return fmt.Errorf("arquivo %s não encontrado na release %s", expectedName, tag)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		return err
-	}
-
-	out, err := os.Create(targetPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	resp, err = http.Get(jarDownloadURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	out.Close()
-
-	if err != nil {
-		return err
-	}
-
-	// Validação de Integridade (SHA256)
-	if expectedDigest != "" {
-		LogFeedback("ASSINATURA CONFIG", "Validando integridade...")
-		isValid, err := checkFileSHA256(targetPath, expectedDigest)
-		if err != nil {
-			return fmt.Errorf("erro ao verificar SHA256: %w", err)
-		}
-		if !isValid {
-			os.Remove(targetPath)
-			return fmt.Errorf("ERRO DE SEGURANÇA: SHA256 não coincide!")
-		}
-		LogFeedback("ASSINATURA CONFIG", "Integridade OK.")
-	}
-
-	return nil
-}
-
-// DownloadJava21 baixa e extrai o JDK 21 da Adoptium.
-func DownloadJava21(targetDir string) error {
-	arch := runtime.GOARCH
-	if arch == "amd64" {
-		arch = "x64"
-	}
-
-	osName := runtime.GOOS
-	if osName == "darwin" {
-		osName = "mac"
-	}
-
-	apiUrl := fmt.Sprintf("https://api.adoptium.net/v3/assets/feature_releases/21/ga?architecture=%s&image_type=jdk&os=%s&project=jdk&vendor=eclipse", arch, osName)
-
-	resp, err := http.Get(apiUrl)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	var releases []map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
-		return err
-	}
-	if len(releases) == 0 {
-		return fmt.Errorf("nenhum release encontrado na API da Adoptium")
-	}
-
-	downloadUrl := releases[0]["binaries"].([]interface{})[0].(map[string]interface{})["package"].(map[string]interface{})["link"].(string)
-	LogFeedback("ASSINATURA CONFIG", "Baixando JDK...")
-
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return err
-	}
-
-	tmpFile := filepath.Join(os.TempDir(), "jdk21_download"+filepath.Ext(downloadUrl))
-	out, err := os.Create(tmpFile)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmpFile)
-
-	resp, err = http.Get(downloadUrl)
-	if err != nil {
-		out.Close()
-		return err
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	out.Close()
-	if err != nil {
-		return err
-	}
-
-	LogFeedback("ASSINATURA CONFIG", "Extraindo arquivos...")
-	if strings.HasSuffix(downloadUrl, ".zip") {
-		return extractZip(tmpFile, targetDir)
-	}
-	return extractTarGz(tmpFile, targetDir)
-}
-
-// Funções de extração simplificadas
 func extractZip(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
 		return err
 	}
-
 	defer r.Close()
 
 	var rootFolder string
-
 	if len(r.File) > 0 {
 		rootFolder = strings.Split(r.File[0].Name, "/")[0]
 	}
@@ -281,23 +77,17 @@ func extractZip(src, dest string) error {
 		outFile.Close()
 		rc.Close()
 	}
-
 	return nil
 }
 
 func extractTarGz(src, dest string) error {
 	f, _ := os.Open(src)
-
 	defer f.Close()
-
 	gzr, _ := gzip.NewReader(f)
-
 	defer gzr.Close()
-
 	tr := tar.NewReader(gzr)
 
 	var rootFolder string
-
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -317,123 +107,5 @@ func extractTarGz(src, dest string) error {
 			outFile.Close()
 		}
 	}
-
 	return nil
-}
-
-func CallJavaServer(endpoint string, data string) (string, error) {
-	url := fmt.Sprintf("http://localhost:8080/%s", endpoint)
-	resp, err := http.Post(url, "text/plain", strings.NewReader(data))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("servidor retornou erro %d: %s", resp.StatusCode, string(body))
-	}
-
-	return string(body), nil
-}
-
-func EnsureServerRunning() error {
-	// Verifica se já está rodando
-	resp, err := http.Get("http://localhost:8080/health")
-	if err == nil && resp.StatusCode == http.StatusOK {
-		resp.Body.Close()
-		return nil
-	}
-
-	LogFeedback("ASSINATURA CONFIG", "Servidor não detectado. Iniciando...")
-
-	javaPath, err := GetJavaPath("java")
-	if err != nil {
-		return err
-	}
-
-	home, _ := os.UserHomeDir()
-	jarDir := filepath.Join(home, ".hubsaude", "bin")
-	jarName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
-	localJarPath := filepath.Join(jarDir, jarName)
-
-	if _, err := os.Stat(localJarPath); os.IsNotExist(err) {
-		if err := DownloadAssinadorJar(localJarPath); err != nil {
-			return err
-		}
-	}
-
-	// Inicia o servidor em background
-	cmd := exec.Command(javaPath, "-jar", localJarPath, "server", "--port", "8080", "--timeout", "1")
-
-	// Configuração para Windows: desvincular do processo pai para persistir
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: 0x01000000 | // CREATE_BREAKAWAY_FROM_JOB
-				0x00000008 | // DETACHED_PROCESS
-				0x00000200, // CREATE_NEW_PROCESS_GROUP
-		}
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		return fmt.Errorf("falha ao iniciar servidor: %w", err)
-	}
-
-	// Libera o rastreio do processo para que ele continue independente
-	if cmd.Process != nil {
-		cmd.Process.Release()
-	}
-
-	// Aguarda o servidor subir (tentativas por 5 segundos)
-	for i := 0; i < 10; i++ {
-		time.Sleep(500 * time.Millisecond)
-		resp, err := http.Get("http://localhost:8080/health")
-		if err == nil && resp.StatusCode == http.StatusOK {
-			resp.Body.Close()
-			LogFeedback("ASSINATURA SERVIDOR", "Servidor online.")
-			return nil
-		}
-	}
-
-	return fmt.Errorf("timeout ao aguardar o servidor subir")
-}
-
-func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
-	// Tenta usar o modo servidor
-	err := EnsureServerRunning()
-	if err == nil {
-		return CallJavaServer(cmdKey, fileName)
-	}
-
-	// Fallback para modo local se falhar ao iniciar o servidor
-	LogFeedback("ASSINATURA CONFIG", "Servidor indisponível. Usando modo local...")
-
-	javaPath, err := GetJavaPath("java")
-	if err != nil {
-		return "", err
-	}
-
-	home, _ := os.UserHomeDir()
-	jarDir := filepath.Join(home, ".hubsaude", "bin")
-	jarName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
-	localJarPath := filepath.Join(jarDir, jarName)
-
-	if _, err := os.Stat(localJarPath); os.IsNotExist(err) {
-		if err := DownloadAssinadorJar(localJarPath); err != nil {
-			return "", err
-		}
-	}
-
-	javaCmd := exec.Command(javaPath, "-jar", localJarPath, cmdKey, fileName)
-	output, err := javaCmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("erro na execução local: %w\n%s", err, string(output))
-	}
-
-	return string(output), nil
 }
