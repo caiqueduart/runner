@@ -12,20 +12,16 @@ permissions:
 
 jobs:
     build:
-        name: Build para ${{ matrix.goos }}
+        name: Build multi plataforma
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                goos: [linux, windows, darwin]
+                goos: [linux, windows, darwin] # Linux, Windows e macOS
                 goarch: [amd64]
 
         defaults:
             run:
                 working-directory: projects/cli
-
-        outputs:
-            version: ${{ steps.version.outputs.val }}
-            tag_exists: ${{ steps.version.outputs.exists }}
 
         steps:
             - name: Checkout
@@ -38,53 +34,49 @@ jobs:
               with:
                   go-version: '1.26.x'
 
+            - name: Download dependências
+              run: go mod download
+
             - name: Extrair versão
               id: version
               shell: bash
               run: |
+                  # Extrai a versão a partir do código Go
                   RAW_VERSION=$(grep -oP 'AssinaturaCLIVersion\s+= "\K[^"]+' assinatura/internal/constants.go)
                   VERSION="assinatura-cli-v$RAW_VERSION"
-                  echo "val=$VERSION" >> $GITHUB_OUTPUT
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+                  # Verifica se a tag já existe no repositório
                   if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
-                      echo "exists=true" >> $GITHUB_OUTPUT
+                      echo "TAG_EXISTS=true" >> $GITHUB_ENV
                   else
-                      echo "exists=false" >> $GITHUB_OUTPUT
+                      echo "TAG_EXISTS=false" >> $GITHUB_ENV
                   fi
 
             - name: Compilar (Build)
-              if: steps.version.outputs.exists == 'false'
+              if: env.TAG_EXISTS == 'false'
               run: |
-                  BINARY_NAME=assinatura-cli-${{ steps.version.outputs.val }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  BINARY_NAME=assinatura-cli-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
                   if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
-                  
+
+                  echo "FINAL_BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
+
+                  # Entra na pasta do CLI e compila
                   GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./assinatura
 
             - name: Upload de artefatos
-              if: steps.version.outputs.exists == 'false'
+              if: env.TAG_EXISTS == 'false'
               uses: actions/upload-artifact@v4
               with:
-                  name: binaries-${{ matrix.goos }}
-                  path: projects/cli/assinatura-cli-${{ steps.version.outputs.val }}-${{ matrix.goos }}-${{ matrix.goarch }}*
+                  name: ${{ env.FINAL_BINARY_NAME }}
+                  path: projects/cli/${{ env.FINAL_BINARY_NAME }}
 
-    release:
-        name: Criar Release GitHub
-        needs: build
-        if: needs.build.outputs.tag_exists == 'false'
-        runs-on: ubuntu-latest
-        steps:
-            - name: Download de todos os artefatos
-              uses: actions/download-artifact@v4
-              with:
-                  path: all-binaries
-                  pattern: binaries-*
-                  merge-multiple: true
-
-            - name: Criar Release
+            - name: Upload dos binários para a Release e adiciona tag
               uses: softprops/action-gh-release@v2
+              if: env.TAG_EXISTS == 'false'
               with:
-                  tag_name: ${{ needs.build.outputs.version }}
-                  name: Release ${{ needs.build.outputs.version }}
+                  tag_name: '${{ env.VERSION }}'
+                  name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
                   files: |
-                      all-binaries/*
+                      projects/cli/${{ env.FINAL_BINARY_NAME }}
