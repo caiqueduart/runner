@@ -9,7 +9,8 @@ Runner é um projeto CLI para validação de assinaturas digitais, desenvolvido 
 ## Referências
 
 - **Especificações completas**: [github.com/kyriosdata/runner](https://github.com/kyriosdata/runner)
-- **Plano de implementação**: [plano-de-implementação.md](./docs/plano-de-implementação.md)
+- **Plano de implementação**: [plano-de-implementação.md](./docs/plano-de-implementacao.md)
+- **Decisões de Projeto**: [decisoes.md](./docs/decisoes.md)
 
 ## Como Usar
 
