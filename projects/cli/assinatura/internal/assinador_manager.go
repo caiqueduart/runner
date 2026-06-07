@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -193,11 +192,7 @@ func EnsureServerRunning() error {
 	}
 
 	cmd := exec.Command(javaPath, "-jar", localJarPath, "server", "--port", ServerPort, "--timeout", ServerTimeoutMinutes)
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: 0x01000000 | 0x00000008 | 0x00000200,
-		}
-	}
+	SetDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("falha ao iniciar servidor: %w", err)
