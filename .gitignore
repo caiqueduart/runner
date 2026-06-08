@@ -1,4 +1,5 @@
 /.vscode
 /projects/assinador/bin
 /projects/assinador/target
+/projects/cli/assinatura/*.txt
 /.env
