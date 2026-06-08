@@ -18,30 +18,32 @@ public class Main {
 
         String cmd = args[0];
         String fileName = "";
+        int port = 8080;
+        long timeout = 5; // Default de 5 minutos conforme CLI Go
 
-        // Parsing manual dos argumentos
+        // Parsing dos argumentos dependendo do comando
         for (int i = 1; i < args.length; i++) {
-            if (args[i].equals("--file")) {
-                if (i + 1 < args.length) {
-                    fileName = args[++i];
-                }
-            } else if (args[i].startsWith("-")) {
-                String flag = args[i];
-                String suggestion = flag.equals("-f") ? " Você quis dizer '--file'?" : "";
-                Tint.logFeedback("ASSINATURA", "Erro: Flag '" + flag + "' não reconhecida." + suggestion);
+            String arg = args[i];
+
+            if (arg.equals("--file")) {
+                if (i + 1 < args.length) fileName = args[++i];
+            } else if (arg.equals("--port") && cmd.equals("server")) {
+                if (i + 1 < args.length) port = Integer.parseInt(args[++i]);
+            } else if (arg.equals("--timeout") && cmd.equals("server")) {
+                if (i + 1 < args.length) timeout = Long.parseLong(args[++i]);
+            } else if (arg.startsWith("-")) {
+                // Validação de flags desconhecidas
+                String suggestion = arg.equals("-f") ? " Você quis dizer '--file'?" : "";
+                Tint.logFeedback("ASSINATURA", "Erro: Flag '" + arg + "' não reconhecida." + suggestion);
                 System.exit(1);
-            } else if (fileName.isEmpty()) {
-                // Se não é uma flag e fileName está vazio, assumimos como argumento posicional
-                fileName = args[i];
+            } else if (fileName.isEmpty() && cmd.equals("validate")) {
+                // Aceita posicional apenas no validate
+                fileName = arg;
             }
         }
 
-        // Validação exclusiva no JAR
+        // Validação de obrigatoriedade
         if (cmd.equals("sign")) {
-            /*  No caso do sign, o usuário deve ter usado --file (ou passamos via loop acima)
-                Mas para garantir a regra, verificamos se o fileName foi preenchido.
-                Se o usuário digitar 'sign arquivo.txt', o loop acima pegará o fileName.
-                No entanto, se queremos OBRIGAR a flag --file no sign: */
             boolean usedFileFlag = false;
             for(String a : args) if(a.equals("--file")) usedFileFlag = true;
 
@@ -49,21 +51,14 @@ public class Main {
                 Tint.logFeedback("ASSINATURA", "Erro do usuário: O parâmetro '--file' é obrigatório para o comando sign.");
                 System.exit(1);
             }
-        } else if (cmd.equals("validate")) {
-            if (fileName.isEmpty()) {
-                Tint.logFeedback("ASSINATURA", "Erro do usuário: Forneça o caminho do arquivo para validação.");
-                System.exit(1);
-            }
+        } else if (cmd.equals("validate") && fileName.isEmpty()) {
+            Tint.logFeedback("ASSINATURA", "Erro do usuário: Forneça o caminho do arquivo para validação.");
+            System.exit(1);
         }
+
         try {
             switch (cmd) {
                 case "server":
-                    int port = 8080;
-                    long timeout = 10;
-                    for (int i = 1; i < args.length; i++) {
-                        if (args[i].equals("--port") && i + 1 < args.length) port = Integer.parseInt(args[++i]);
-                        if (args[i].equals("--timeout") && i + 1 < args.length) timeout = Long.parseLong(args[++i]);
-                    }
                     HttpServerService.start(port, timeout);
                     break;
 
