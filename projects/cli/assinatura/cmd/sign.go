@@ -2,19 +2,17 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"runner/assinatura/internal"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	sFile   string
-	sCmdKey = "sign"
+	sFile string
 )
 
 var signCmd = &cobra.Command{
-	Use:   sCmdKey,
+	Use:   "sign",
 	Short: "Assina um documento",
 	Run: func(cmd *cobra.Command, args []string) {
 		runSign()
@@ -22,18 +20,9 @@ var signCmd = &cobra.Command{
 }
 
 func runSign() {
-
-	// Leitura das informações do arquivo passado nos parâmetros
-	fileInfo, err := os.Stat(sFile)
+	output, err := internal.ExecJavaSigner(sFile, "sign")
 	if err != nil {
-		internal.PrintError("Erro ao ler o arquivo '%s': \n%v", sFile, err)
-		return
-	}
-
-	// Execução do comando para o assinador
-	output, err := internal.ExecJavaSigner(string(fileInfo.Name()), sCmdKey)
-	if err != nil {
-		internal.PrintError("Erro ao executar o assinador: \n%v", err)
+		fmt.Print(err)
 		return
 	}
 
@@ -41,8 +30,7 @@ func runSign() {
 }
 
 func init() {
-	signCmd.Flags().StringVarP(&sFile, "file", "f", "", "Arquivo para assinatura")
-	signCmd.MarkFlagRequired("file")
+	signCmd.Flags().StringVar(&sFile, "file", "", "Caminho do arquivo para assinatura")
 
 	RootCmd.AddCommand(signCmd)
 }

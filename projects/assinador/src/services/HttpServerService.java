@@ -31,8 +31,6 @@ public class HttpServerService {
 
         try {
             server = HttpServer.create(new InetSocketAddress(effectivePort), 0);
-            
-            // Usando Virtual Threads (Java 21) para o executor do servidor
             server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
 
             server.createContext("/sign", new SignHandler());
@@ -83,30 +81,32 @@ public class HttpServerService {
     static class SignHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            updateLastRequestTime();
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
-            // ... (rest of handle)
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             String fileName = body.trim();
             
             if (fileName.isEmpty()) {
-                sendResponse(exchange, "Erro: Nome do arquivo não fornecido.", 400);
+                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro do usuário: O parâmetro '--file' é obrigatório.", 400);
                 return;
             }
 
-            String response = SignatureService.sign(fileName);
-            sendResponse(exchange, response, 200);
+            try {
+                updateLastRequestTime();
+                String response = SignatureService.sign(fileName);
+                sendResponse(exchange, response, 200);
+            } catch (Exception e) {
+                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro: " + e.getMessage(), 400);
+            }
         }
     }
 
     static class ValidateHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            updateLastRequestTime();
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(405, -1);
                 return;
@@ -116,12 +116,17 @@ public class HttpServerService {
             String fileName = body.trim();
 
             if (fileName.isEmpty()) {
-                sendResponse(exchange, "Erro: Nome do arquivo não fornecido.", 400);
+                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro do usuário: O parâmetro '--file' é obrigatório.", 400);
                 return;
             }
 
-            String response = SignatureService.validate(fileName);
-            sendResponse(exchange, response, 200);
+            try {
+                updateLastRequestTime();
+                String response = SignatureService.validate(fileName);
+                sendResponse(exchange, response, 200);
+            } catch (Exception e) {
+                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro: " + e.getMessage(), 400);
+            }
         }
     }
 
@@ -149,6 +154,7 @@ public class HttpServerService {
             new Thread(() -> {
                 try {
                     Thread.sleep(500);
+                    Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrando...");
                     stopServer();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

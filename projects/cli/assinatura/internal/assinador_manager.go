@@ -225,10 +225,19 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 	javaPath, _ := GetJavaPath("java")
 	localJarPath := GetJarPath()
 
-	javaCmd := exec.Command(javaPath, "-jar", localJarPath, cmdKey, fileName)
+	var javaCmd *exec.Cmd
+	if cmdKey == "sign" {
+		// No sign, obrigamos a flag --file no JAR
+		javaCmd = exec.Command(javaPath, "-jar", localJarPath, cmdKey, "--file", fileName)
+	} else {
+		// No validate, passamos como argumento posicional
+		javaCmd = exec.Command(javaPath, "-jar", localJarPath, cmdKey, fileName)
+	}
+
 	output, err := javaCmd.CombinedOutput()
+	
 	if err != nil {
-		return "", fmt.Errorf("erro na execução local: %w\n%s", err, string(output))
+		return string(output), nil
 	}
 	return string(output), nil
 }
