@@ -22,7 +22,7 @@ public class SignatureService {
         }
 
         return formatSignatureMessage(fileName, code) + "\n" +
-               Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Arquivo gerado em: " + outputFile.getAbsolutePath();
+               Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Código disponível em: " + outputFile.getAbsolutePath();
     }
 
 
