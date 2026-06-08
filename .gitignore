@@ -1,3 +1,4 @@
 /.vscode
 /projects/assinador/bin
 /projects/assinador/target
+/.env

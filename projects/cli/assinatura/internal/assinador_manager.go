@@ -217,6 +217,28 @@ func EnsureServerRunning() error {
 }
 
 func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
+	// MODO DESENVOLVEDOR: Executa direto do .java se a variável DEV_MODE=true
+	if os.Getenv("DEV_MODE") == "true" {
+		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo Main.java).")
+		
+		// Descobre o caminho absoluto para o Main.java partindo da raiz do projeto
+		// Assumindo que a CLI roda de dentro de projects/cli/assinatura
+		javaSource := "../../../projects/assinador/src/Main.java"
+		
+		var javaCmd *exec.Cmd
+		if cmdKey == "sign" {
+			javaCmd = exec.Command("java", javaSource, cmdKey, "--file", fileName)
+		} else {
+			javaCmd = exec.Command("java", javaSource, cmdKey, fileName)
+		}
+		
+		output, err := javaCmd.CombinedOutput()
+		if err != nil {
+			return string(output), nil
+		}
+		return string(output), nil
+	}
+
 	if err := EnsureServerRunning(); err == nil {
 		return CallJavaServer(cmdKey, fileName)
 	}
