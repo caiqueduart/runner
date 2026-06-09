@@ -1,4 +1,4 @@
-package src.services;
+package services;
 
 public class SignatureService {
     SignatureService() {}

@@ -224,7 +224,7 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 		// Descobre o caminho absoluto para a raiz do projeto e depois para o Main.java
 		wd, _ := os.Getwd()
 		root := filepath.Join(wd, "..", "..", "..")
-		javaSource := filepath.Join(root, "projects", "assinador", "src", "Main.java")
+		javaSource := filepath.Join(root, "projects", "assinador", "src", "main", "Main.java")
 
 		var javaCmd *exec.Cmd
 		if cmdKey == "sign" {

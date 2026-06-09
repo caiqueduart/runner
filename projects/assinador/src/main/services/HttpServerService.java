@@ -1,4 +1,4 @@
-package src.services;
+package services;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;

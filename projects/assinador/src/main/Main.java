@@ -1,9 +1,8 @@
-package src;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import src.services.HttpServerService;
-import src.services.SignatureService;
-import src.services.Tint;
+import services.HttpServerService;
+import services.SignatureService;
+import services.Tint;
 
 public class Main {
     public static void main(String[] args) throws UnsupportedEncodingException {

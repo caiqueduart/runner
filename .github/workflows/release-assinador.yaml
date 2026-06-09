@@ -37,7 +37,7 @@ jobs:
               shell: bash
               run: |
                   # Extrai a versão a partir do arquivo Version.java
-                  RAW_VERSION=$(grep -oP 'public static final String APP_VERSION = "\K[^"]+' src/Version.java)
+                  RAW_VERSION=$(grep -oP 'public static final String APP_VERSION = "\K[^"]+' src/main/Version.java)
                   VERSION="assinador-v$RAW_VERSION"
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
                   echo "RAW_VERSION=$RAW_VERSION" >> $GITHUB_ENV
