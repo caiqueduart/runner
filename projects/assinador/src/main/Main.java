@@ -9,7 +9,7 @@ public class Main {
         /* Configurar UTF-8 */
         System.setOut(new PrintStream(System.out, true, "UTF-8"));
         System.setErr(new PrintStream(System.err, true, "UTF-8"));
-        
+
         if (args.length == 0) {
             Tint.logFeedback("ASSINATURA", "Erro: Nenhum comando fornecido. Use 'sign' ou 'validate'.");
             System.exit(1);
@@ -25,14 +25,17 @@ public class Main {
             String arg = args[i];
 
             if (arg.equals("--file")) {
-                if (i + 1 < args.length) fileName = args[++i];
+                if (i + 1 < args.length)
+                    fileName = args[++i];
             } else if (arg.equals("--port") && cmd.equals("server")) {
-                if (i + 1 < args.length) port = Integer.parseInt(args[++i]);
+                if (i + 1 < args.length)
+                    port = Integer.parseInt(args[++i]);
             } else if (arg.equals("--timeout") && cmd.equals("server")) {
-                if (i + 1 < args.length) timeout = Long.parseLong(args[++i]);
+                if (i + 1 < args.length)
+                    timeout = Long.parseLong(args[++i]);
             } else if (arg.startsWith("-")) {
                 // Validação de flags desconhecidas
-                String suggestion = arg.equals("-f") ? " Você quis dizer '--file'?" : "";
+                String suggestion = (arg.equals("-f") || arg.equals("--f")) ? " Você quis dizer '--file'?" : "";
                 Tint.logFeedback("ASSINATURA", "Erro: Flag '" + arg + "' não reconhecida." + suggestion);
                 System.exit(1);
             } else if (fileName.isEmpty() && cmd.equals("validate")) {
@@ -44,10 +47,13 @@ public class Main {
         // Validação de obrigatoriedade
         if (cmd.equals("sign")) {
             boolean usedFileFlag = false;
-            for(String a : args) if(a.equals("--file")) usedFileFlag = true;
+            for (String a : args)
+                if (a.equals("--file"))
+                    usedFileFlag = true;
 
             if (!usedFileFlag || fileName.isEmpty()) {
-                Tint.logFeedback("ASSINATURA", "Erro do usuário: O parâmetro '--file' é obrigatório para o comando sign.");
+                Tint.logFeedback("ASSINATURA",
+                        "Erro do usuário: O parâmetro '--file' é obrigatório para o comando sign.");
                 System.exit(1);
             }
         } else if (cmd.equals("validate") && fileName.isEmpty()) {

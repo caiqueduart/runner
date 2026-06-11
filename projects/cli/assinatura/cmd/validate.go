@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"runner/assinatura/internal"
 
 	"github.com/spf13/cobra"
@@ -11,17 +12,19 @@ var validateCmd = &cobra.Command{
 	Use:   "validate [file]",
 	Short: "Valida a assinatura de um documento",
 	Args:  cobra.MaximumNArgs(1),
+	FParseErrWhitelist: cobra.FParseErrWhitelist{
+		UnknownFlags: true,
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		vFile := ""
-		if len(args) > 0 {
-			vFile = args[0]
-		}
-		runValidate(vFile)
+		runValidate()
 	},
 }
 
-func runValidate(file string) {
-	output, err := internal.ExecJavaSigner(file, "validate")
+func runValidate() {
+	// os.Args[2:] pega tudo após 'validate'
+	args := os.Args[2:]
+
+	output, err := internal.ExecJavaSigner("validate", args)
 	if err != nil {
 		fmt.Print(err)
 		return

@@ -16,13 +16,14 @@ public class SignatureService {
         String extension = nameOnly.contains(".") ? nameOnly.substring(nameOnly.lastIndexOf('.') + 1) : "";
         String outputName = baseName + "-" + extension + "-assinatura.txt";
 
-        java.io.File outputFile = new java.io.File(outputName);
+        // Usamos o diretório de execução atual do processo Java
+        java.io.File outputFile = new java.io.File(System.getProperty("user.dir"), outputName);
         try (java.io.FileWriter writer = new java.io.FileWriter(outputFile)) {
             writer.write(code);
         }
 
         return formatSignatureMessage(fileName, code) + "\n" +
-               Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Código disponível em: " + outputFile.getAbsolutePath();
+               Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Arquivo gerado em: " + Tint.GREEN + outputFile.getAbsolutePath() + Tint.RESET;
     }
 
 

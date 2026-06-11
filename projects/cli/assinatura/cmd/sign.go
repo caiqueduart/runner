@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"runner/assinatura/internal"
 
 	"github.com/spf13/cobra"
@@ -14,13 +15,20 @@ var (
 var signCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Assina um documento",
+	FParseErrWhitelist: cobra.FParseErrWhitelist{
+		UnknownFlags: true,
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		runSign()
 	},
 }
 
 func runSign() {
-	output, err := internal.ExecJavaSigner(sFile, "sign")
+	// Pega todos os argumentos após 'sign'
+	// os.Args[0] = cli, os.Args[1] = sign, os.Args[2:] = restante
+	args := os.Args[2:]
+
+	output, err := internal.ExecJavaSigner("sign", args)
 	if err != nil {
 		fmt.Print(err)
 		return

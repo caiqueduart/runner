@@ -216,22 +216,36 @@ func EnsureServerRunning() error {
 	return fmt.Errorf("timeout ao aguardar o servidor subir")
 }
 
-func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
+func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 	// MODO DESENVOLVEDOR: Executa direto do .java se a variável DEV_MODE=true
 	if os.Getenv("DEV_MODE") == "true" {
 		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo Main.java).")
 
-		// Descobre o caminho absoluto para a raiz do projeto e depois para o Main.java
-		wd, _ := os.Getwd()
-		root := filepath.Join(wd, "..", "..", "..")
-		javaSource := filepath.Join(root, "projects", "assinador", "src", "main", "Main.java")
-
-		var javaCmd *exec.Cmd
-		if cmdKey == "sign" {
-			javaCmd = exec.Command("java", javaSource, cmdKey, "--file", fileName)
-		} else {
-			javaCmd = exec.Command("java", javaSource, cmdKey, fileName)
+		currDir, _ := os.Getwd()
+		assinadorDir := ""
+		tempDir := currDir
+		for i := 0; i < 6; i++ {
+			target := filepath.Join(tempDir, "projects", "assinador")
+			if _, err := os.Stat(target); err == nil {
+				assinadorDir = target
+				break
+			}
+			parent := filepath.Dir(tempDir)
+			if parent == tempDir {
+				break
+			}
+			tempDir = parent
 		}
+
+		if assinadorDir == "" {
+			return "", fmt.Errorf("não foi possível localizar projects/assinador")
+		}
+
+		srcMainDir := filepath.Join(assinadorDir, "src", "main")
+		mainJava := filepath.Join(srcMainDir, "Main.java")
+
+		args := append([]string{"-cp", srcMainDir, mainJava, cmdKey}, cmdArgs...)
+		javaCmd := exec.Command("java", args...)
 
 		output, err := javaCmd.CombinedOutput()
 		if err != nil {
@@ -241,6 +255,14 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 	}
 
 	if err := EnsureServerRunning(); err == nil {
+		fileName := ""
+		for i, arg := range cmdArgs {
+			if arg == "--file" && i+1 < len(cmdArgs) {
+				fileName = cmdArgs[i+1]
+			} else if !strings.HasPrefix(arg, "-") && cmdKey == "validate" {
+				fileName = arg
+			}
+		}
 		return CallJavaServer(cmdKey, fileName)
 	}
 
@@ -248,17 +270,10 @@ func ExecJavaSigner(fileName string, cmdKey string) (string, error) {
 	javaPath, _ := GetJavaPath("java")
 	localJarPath := GetJarPath()
 
-	var javaCmd *exec.Cmd
-	if cmdKey == "sign" {
-		// No sign, obrigamos a flag --file no JAR
-		javaCmd = exec.Command(javaPath, "-jar", localJarPath, cmdKey, "--file", fileName)
-	} else {
-		// No validate, passamos como argumento posicional
-		javaCmd = exec.Command(javaPath, "-jar", localJarPath, cmdKey, fileName)
-	}
+	args := append([]string{"-jar", localJarPath, cmdKey}, cmdArgs...)
+	javaCmd := exec.Command(javaPath, args...)
 
 	output, err := javaCmd.CombinedOutput()
-
 	if err != nil {
 		return string(output), nil
 	}
