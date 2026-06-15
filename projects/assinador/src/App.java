@@ -1,19 +1,25 @@
-package main;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import main.services.HttpServerService;
-import main.services.SignatureService;
-import main.services.Tint;
+import services.HttpServerService;
+import services.SignatureService;
+import services.Tint;
 
-public class Main {
+public class App {
     public static void main(String[] args) throws UnsupportedEncodingException {
+        int status = run(args);
+        if (status != 0) {
+            System.exit(status);
+        }
+    }
+
+    public static int run(String[] args) throws UnsupportedEncodingException {
         /* Configurar UTF-8 */
         System.setOut(new PrintStream(System.out, true, "UTF-8"));
         System.setErr(new PrintStream(System.err, true, "UTF-8"));
 
         if (args.length == 0) {
             Tint.logFeedback("ASSINATURA", "Erro: Nenhum comando fornecido. Use 'sign' ou 'validate'.");
-            System.exit(1);
+            return 1;
         }
 
         String cmd = args[0];
@@ -38,7 +44,7 @@ public class Main {
                 // Validação de flags desconhecidas
                 String suggestion = (arg.equals("-f") || arg.equals("--f")) ? " Você quis dizer '--file'?" : "";
                 Tint.logFeedback("ASSINATURA", "Erro: Flag '" + arg + "' não reconhecida." + suggestion);
-                System.exit(1);
+                return 1;
             } else if (fileName.isEmpty() && cmd.equals("validate")) {
                 // Aceita posicional apenas no validate
                 fileName = arg;
@@ -55,11 +61,11 @@ public class Main {
             if (!usedFileFlag || fileName.isEmpty()) {
                 Tint.logFeedback("ASSINATURA",
                         "Erro do usuário: O parâmetro '--file' é obrigatório para o comando sign.");
-                System.exit(1);
+                return 1;
             }
         } else if (cmd.equals("validate") && fileName.isEmpty()) {
             Tint.logFeedback("ASSINATURA", "Erro do usuário: Forneça o caminho do arquivo para validação.");
-            System.exit(1);
+            return 1;
         }
 
         try {
@@ -78,11 +84,12 @@ public class Main {
 
                 default:
                     Tint.logFeedback("ASSINATURA", "Erro: Comando '" + cmd + "' não reconhecido.");
-                    System.exit(1);
+                    return 1;
             }
         } catch (Exception e) {
             Tint.logFeedback("ASSINATURA", "Erro do sistema: " + e.getMessage());
-            System.exit(2);
+            return 2;
         }
+        return 0;
     }
 }

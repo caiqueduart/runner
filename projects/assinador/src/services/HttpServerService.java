@@ -1,4 +1,4 @@
-package main.services;
+package services;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -64,7 +64,15 @@ public class HttpServerService {
         lastRequestTime.set(System.currentTimeMillis());
     }
 
+    public static void stop() {
+        stopServer(false);
+    }
+
     private static void stopServer() {
+        stopServer(true);
+    }
+
+    private static void stopServer(boolean exit) {
         try {
             if (scheduler != null) {
                 scheduler.shutdownNow();
@@ -74,7 +82,9 @@ public class HttpServerService {
             }
         } finally {
             Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrado.");
-            System.exit(0);
+            if (exit) {
+                System.exit(0);
+            }
         }
     }
 

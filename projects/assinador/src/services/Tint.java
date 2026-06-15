@@ -1,4 +1,4 @@
-package main.services;
+package services;
 
 public class Tint {
     public static final String RESET = "\u001B[0m";
