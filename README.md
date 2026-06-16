@@ -30,8 +30,8 @@ runner/
     │   │
     │   ├── src/
     │   │   ├── services/           # Lógica de validação e simulação
-    │   │   └── Main.java
-    │   └── pom.xml                 # Arquivo de configuração do Maven
+    │   │   └── App.java            # Ponto de entrada da aplicação
+    │   └── lib/                    # Dependências JAR
     │
     └── cli/                        # Código-fonte das aplicações Go (CLIs)
         ├── assinatura/             # CLI de assinatura

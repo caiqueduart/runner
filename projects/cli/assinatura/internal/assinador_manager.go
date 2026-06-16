@@ -219,7 +219,7 @@ func EnsureServerRunning() error {
 func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 	// MODO DESENVOLVEDOR: Executa direto do .java se a variável DEV_MODE=true
 	if os.Getenv("DEV_MODE") == "true" {
-		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo Main.java).")
+		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo App.java).")
 
 		currDir, _ := os.Getwd()
 		assinadorDir := ""
@@ -241,10 +241,10 @@ func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 			return "", fmt.Errorf("não foi possível localizar projects/assinador")
 		}
 
-		srcMainDir := filepath.Join(assinadorDir, "src", "main")
-		mainJava := filepath.Join(srcMainDir, "Main.java")
+		srcDir := filepath.Join(assinadorDir, "src")
+		appJava := filepath.Join(srcDir, "App.java")
 
-		args := append([]string{"-cp", srcMainDir, mainJava, cmdKey}, cmdArgs...)
+		args := append([]string{"-cp", srcDir, appJava, cmdKey}, cmdArgs...)
 		javaCmd := exec.Command("java", args...)
 
 		output, err := javaCmd.CombinedOutput()
