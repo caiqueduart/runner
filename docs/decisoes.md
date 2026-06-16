@@ -1,4 +1,4 @@
-# Decisões de Projeto - Runner
+# Decisões de Projeto
 
 Este documento registra as decisões arquiteturais e técnicas tomadas durante o desenvolvimento do sistema **Runner**, comparando-as com a especificação original e o [repositório de referência](https://github.com/kyriosdata/runner) do professor Dr. Fábio Nogueira.
 
@@ -29,3 +29,24 @@ Este documento registra as decisões arquiteturais e técnicas tomadas durante o
 
 - **Diferença:** O código Go das CLIs foi dividido em arquivos especializados (`assinador_manager.go`, `constants.go`, `utils.go`, etc) em vez de manter toda a lógica em um único arquivo.
 - **Justificativa:** Melhora a manutenção a longo prazo e a legibilidade do projeto, separando as configurações globais das demais operações, e da lógica de gerenciamento de processos.
+
+---
+
+**Decisão:** Modo Desenvolvedor (DEV_MODE).
+
+- **Diferença:** Implementação de uma variável de ambiente `DEV_MODE=true` em um arquivo `.env` que a CLI Assinatura usa para executar o código-fonte Java diretamente via `java -cp ... App.java`, em vez de baixar e executar o `.jar` da release.
+- **Justificativa:** Agiliza o ciclo de desenvolvimento e testes de integração, permitindo validar mudanças no código Java instantaneamente sem a necessidade de gerar um novo artefato ou realizar um push para o GitHub.
+
+---
+
+**Decisão:** Uso de Java 21 e Virtual Threads (Project Loom).
+
+- **Diferença:** O servidor Java utiliza `Executors.newVirtualThreadPerTaskExecutor()` para processar requisições HTTP.
+- **Justificativa:** Permite que o servidor lide com alta concorrência de forma extremamente leve, sem o overhead de pools de threads tradicionais, aproveitando as funcionalidades mais modernas do JDK 21 para performance.
+
+---
+
+**Decisão:** Verificação de Integridade via SHA256.
+
+- **Diferença:** Todos os downloads de artefatos realizados pela CLI são validados com um hash SHA256, e todos os arterfatos enviados ao repositório são assinados automaticamente pelo GitHub.
+- **Justificativa:** Segurança e robustez. Garante que o binário baixado não foi corrompido ou alterado maliciosamente durante o transporte.
