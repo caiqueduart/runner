@@ -11,22 +11,48 @@ O **Assinador** é o componente central do sistema Runner. Ele é responsável p
 
 ## Como Executar (Desenvolvimento)
 
+O `App.java` exige que as requisições, mesmo via terminal, sejam feitas em formato **JSON**, garantindo um contrato unificado com a API HTTP.
+
 ```bash
-# Modo CLI (Assinar)
-java -cp bin App sign --file documento.txt
+# Modo CLI (Assinar) - Requer JSON
+java -cp bin App '{"command": "sign", "file": "documento.txt"}'
 
 # Modo Servidor
 java -cp bin App server --port 8080 --timeout 5
 ```
 
-## Endpoints da API (Modo Servidor)
+## Contrato de Comunicação e API (Modo Servidor)
 
-| Rota        | Método | Descrição                                                           |
-| :---------- | :----- | :------------------------------------------------------------------ |
-| `/sign`     | `POST` | Recebe o nome do arquivo no corpo e retorna o código de assinatura. |
-| `/validate` | `POST` | Recebe o nome do arquivo e valida a assinatura existente.           |
-| `/health`   | `GET`  | Retorna o status de saúde e tempo de atividade do servidor.         |
-| `/stop`     | `POST` | Encerra o servidor.                                                 |
+Tanto o modo CLI quanto as requisições HTTP (`/sign` e `/validate`) exigem **JSON** no corpo da requisição e retornam **JSON** estruturado.
+
+### Exemplo de Requisição (POST /sign ou Argumento CLI):
+
+```json
+{
+    "command": "sign",
+    "file": "caminho/do/arquivo.txt",
+    "flag": "--file"
+}
+```
+
+### Endpoints Disponíveis
+
+| Rota        | Método | Descrição                                                      | Exemplo de Resposta (Sucesso)                                                                                      |
+| :---------- | :----- | :------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| `/sign`     | `POST` | Recebe o JSON com o caminho do arquivo e retorna a assinatura. | `{"message": "Arquivo assinado...", "fileName": "doc.txt", "code": "ABC", "signOutputPath": "...", "status": 200}` |
+| `/validate` | `POST` | Recebe o JSON com o caminho do arquivo e valida a assinatura.  | `{"message": "Validação concluída.", "fileName": "doc.txt", "code": "ABC", "valid": true, "status": 200}`          |
+| `/health`   | `GET`  | Retorna status de saúde e tempos de atividade em JSON.         | `{"status": "OK", "uptimeSeconds": 120, "code": 200}`                                                              |
+| `/stop`     | `POST` | Encerra o servidor.                                            | `{"message": "Sinal de encerramento recebido.", "status": 200}`                                                    |
+
+**Erros Estruturados:** Em caso de erro, o servidor retorna `400 Bad Request` (erro de usuário) ou `500 Internal Server Error` (erro de sistema) com o corpo:
+
+```json
+{
+    "error": "Arquivo 'arquivo.txt' não encontrado.",
+    "status": 400,
+    "type": "user"
+}
+```
 
 ## Modo Desenvolvedor
 

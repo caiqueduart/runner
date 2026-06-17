@@ -39,13 +39,13 @@ public class HttpServerService {
             server.createContext("/stop", new StopHandler());
 
             server.start();
-            Tint.logFeedback("ASSINATURA SERVIDOR", "Online na porta " + effectivePort);
-            Tint.logFeedback("ASSINATURA SERVIDOR", "Auto-desligamento em " + effectiveTimeout + "m.");
+            logServerEvent("INFO", "Online na porta " + effectivePort);
+            logServerEvent("INFO", "Auto-desligamento em " + effectiveTimeout + "m.");
 
             startTimeoutChecker(effectiveTimeout);
 
         } catch (IOException e) {
-            Tint.logFeedback("ASSINATURA SERVIDOR", "Erro ao iniciar: " + e.getMessage());
+            logServerEvent("ERROR", "Erro ao iniciar: " + e.getMessage());
         }
     }
 
@@ -53,8 +53,9 @@ public class HttpServerService {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
             long inactiveTime = System.currentTimeMillis() - lastRequestTime.get();
+
             if (inactiveTime >= timeoutMillis) {
-                Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrando por inatividade...");
+                logServerEvent("INFO", "Encerrando por inatividade...");
                 stopServer();
             }
         }, 5, 5, TimeUnit.SECONDS);
@@ -81,7 +82,7 @@ public class HttpServerService {
                 server.stop(0);
             }
         } finally {
-            Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrado.");
+            logServerEvent("INFO", "Encerrado.");
             if (exit) {
                 System.exit(0);
             }
@@ -97,19 +98,51 @@ public class HttpServerService {
             }
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            String fileName = body.trim();
             
-            if (fileName.isEmpty()) {
-                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro do usuário: O parâmetro '--file' é obrigatório.", 400);
-                return;
-            }
-
             try {
+                // parse simplificado de JSON manual (para evitar dependências)
+                String fileName = extractFromJson(body, "file");
+                
+                if (fileName == null || fileName.isEmpty()) {
+                    sendJsonResponse(exchange, """
+                        {
+                            "error": "O parâmetro 'file' no JSON é obrigatório.",
+                            "status": 400,
+                            "type": "user"
+                        }
+                        """, 400);
+                    return;
+                }
+
                 updateLastRequestTime();
-                String response = SignatureService.sign(fileName);
-                sendResponse(exchange, response, 200);
+                SignatureService service = ServiceFactory.getSignatureService();
+                SignatureResult res = service.sign(fileName);
+                
+                String json = """
+                    {
+                        "message": "Arquivo assinado com sucesso.",
+                        "fileName": "%s",
+                        "code": "%s",
+                        "signOutputPath": "%s",
+                        "status": 200
+                    }
+                    """.formatted(
+                        res.fileName().replace("\\", "/"), 
+                        res.code(), 
+                        res.filePath().replace("\\", "/")
+                    );
+                sendJsonResponse(exchange, json, 200);
             } catch (Exception e) {
-                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro: " + e.getMessage(), 400);
+                boolean isUserError = e.getMessage().contains("não encontrado") || e.getMessage().contains("obrigatório");
+                int statusCode = isUserError ? 400 : 500;
+                String type = isUserError ? "user" : "system";
+                sendJsonResponse(exchange, """
+                    {
+                        "error": "%s",
+                        "status": %d,
+                        "type": "%s"
+                    }
+                    """.formatted(e.getMessage(), statusCode, type), statusCode);
             }
         }
     }
@@ -123,21 +156,61 @@ public class HttpServerService {
             }
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            String fileName = body.trim();
-
-            if (fileName.isEmpty()) {
-                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro do usuário: O parâmetro '--file' é obrigatório.", 400);
-                return;
-            }
 
             try {
+                String fileName = extractFromJson(body, "file");
+                
+                if (fileName == null || fileName.isEmpty()) {
+                    sendJsonResponse(exchange, """
+                        {
+                            "error": "O parâmetro 'file' no JSON é obrigatório.",
+                            "status": 400,
+                            "type": "user"
+                        }
+                        """, 400);
+                    return;
+                }
+
                 updateLastRequestTime();
-                String response = SignatureService.validate(fileName);
-                sendResponse(exchange, response, 200);
+                SignatureService service = ServiceFactory.getSignatureService();
+                ValidationResult res = service.validate(fileName);
+                
+                String json = """
+                    {
+                        "message": "Validação concluída.",
+                        "fileName": "%s",
+                        "code": "%s",
+                        "valid": %b,
+                        "status": 200
+                    }
+                    """.formatted(
+                        res.fileName().replace("\\", "\\\\"), 
+                        res.code(), 
+                        res.valid()
+                    );
+                sendJsonResponse(exchange, json, 200);
             } catch (Exception e) {
-                sendResponse(exchange, Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Erro: " + e.getMessage(), 400);
+                boolean isUserError = e.getMessage().contains("não encontrado") || e.getMessage().contains("obrigatório") || e.getMessage().contains(".txt");
+                int statusCode = isUserError ? 400 : 500;
+                String type = isUserError ? "user" : "system";
+                sendJsonResponse(exchange, """
+                    {
+                        "error": "%s",
+                        "status": %d,
+                        "type": "%s"
+                    }
+                    """.formatted(e.getMessage(), statusCode, type), statusCode);
             }
         }
+    }
+
+    private static String extractFromJson(String json, String key) {
+        String pattern = "\"" + key + "\":\\s*\"([^\"]*)\"";
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(pattern).matcher(json);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
     }
 
     static class HealthHandler implements HttpHandler {
@@ -148,23 +221,32 @@ public class HttpServerService {
             long remainingMillis = timeoutMillis - (now - lastRequestTime.get());
             long remainingSeconds = Math.max(0, remainingMillis / 1000);
             
-            String response = String.format(
-                "Status: OK\nUptime: %ds\nAuto-shutdown em: %ds",
-                uptimeSeconds, remainingSeconds
-            );
+            String json = """
+                {
+                    "status": "OK",
+                    "uptimeSeconds": %d,
+                    "remainingSeconds": %d,
+                    "code": 200
+                }
+                """.formatted(uptimeSeconds, remainingSeconds);
             
-            sendResponse(exchange, response, 200);
+            sendJsonResponse(exchange, json, 200);
         }
     }
 
     static class StopHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            sendResponse(exchange, "Sinal de encerramento recebido.", 200);
+            sendJsonResponse(exchange, """
+                {
+                    "message": "Sinal de encerramento recebido.",
+                    "status": 200
+                }
+                """, 200);
             new Thread(() -> {
                 try {
                     Thread.sleep(500);
-                    Tint.logFeedback("ASSINATURA SERVIDOR", "Encerrando...");
+                    logServerEvent("INFO", "Encerrando...");
                     stopServer();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -173,12 +255,24 @@ public class HttpServerService {
         }
     }
 
-    private static void sendResponse(HttpExchange exchange, String response, int statusCode) throws IOException {
-        byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
+    private static void sendJsonResponse(HttpExchange exchange, String json, int statusCode) throws IOException {
+        byte[] bytes = json.trim().getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
         exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
         }
+    }
+
+    private static void logServerEvent(String level, String message) {
+        String json = """
+            {
+                "level": "%s",
+                "component": "SERVER",
+                "message": "%s",
+                "timestamp": %d
+            }
+            """.formatted(level, message, System.currentTimeMillis());
+        System.out.println(json);
     }
 }

@@ -3,6 +3,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.BeforeEach;
 import services.SignatureService;
+import services.SignatureResult;
+import services.ValidationResult;
+import services.ServiceFactory;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Files;
@@ -13,22 +16,23 @@ class SignatureServiceTest {
     Path tempDir;
 
     private File testFile;
+    private SignatureService service;
 
     @BeforeEach
     void setUp() throws Exception {
         testFile = tempDir.resolve("test.txt").toFile();
         Files.writeString(testFile.toPath(), "conteudo de teste");
+        service = ServiceFactory.getSignatureService();
     }
 
     @Test
     void testSignSuccess() throws Exception {
-        String result = SignatureService.sign(testFile.getAbsolutePath());
+        SignatureResult result = service.sign(testFile.getAbsolutePath());
         assertNotNull(result);
-        assertTrue(result.contains("gerou o código de assinatura"));
+        assertNotNull(result.code());
         
         // Verifica se o arquivo de assinatura foi criado
-        String expectedSignFileName = "test-txt-assinatura.txt";
-        File signFile = new File(System.getProperty("user.dir"), expectedSignFileName);
+        File signFile = new File(result.filePath());
         assertTrue(signFile.exists(), "Arquivo de assinatura deve existir");
         
         // Cleanup
@@ -38,20 +42,20 @@ class SignatureServiceTest {
     @Test
     void testSignFileNotFound() {
         assertThrows(Exception.class, () -> {
-            SignatureService.sign("arquivo_inexistente.txt");
+            service.sign("arquivo_inexistente.txt");
         });
     }
 
     @Test
     void testValidateSuccess() throws Exception {
-        SignatureService.sign(testFile.getAbsolutePath());
-        String signFileName = "test-txt-assinatura.txt";
-        File signFile = new File(System.getProperty("user.dir"), signFileName);
+        SignatureResult signResult = service.sign(testFile.getAbsolutePath());
+        File signFile = new File(signResult.filePath());
         
         try {
-            String result = SignatureService.validate(signFile.getAbsolutePath());
+            ValidationResult result = service.validate(signFile.getAbsolutePath());
             assertNotNull(result);
-            assertTrue(result.contains("está assinado sob o código"));
+            assertTrue(result.valid());
+            assertEquals(signResult.code(), result.code());
         } finally {
             signFile.delete();
         }
@@ -60,7 +64,7 @@ class SignatureServiceTest {
     @Test
     void testValidateFileNotFound() {
         assertThrows(Exception.class, () -> {
-            SignatureService.validate("assinatura_inexistente.txt");
+            service.validate("assinatura_inexistente.txt");
         });
     }
 
@@ -70,7 +74,7 @@ class SignatureServiceTest {
         Files.writeString(wrongFile.toPath(), "not a signature");
         
         assertThrows(Exception.class, () -> {
-            SignatureService.validate(wrongFile.getAbsolutePath());
+            service.validate(wrongFile.getAbsolutePath());
         }, "Deve falhar se não for .txt");
     }
 }

@@ -2,94 +2,142 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import services.HttpServerService;
 import services.SignatureService;
-import services.Tint;
+import services.SignatureResult;
+import services.ValidationResult;
+import services.ServiceFactory;
 
 public class App {
     public static void main(String[] args) throws UnsupportedEncodingException {
         int status = run(args);
+
         if (status != 0) {
             System.exit(status);
         }
     }
 
     public static int run(String[] args) throws UnsupportedEncodingException {
-        /* Configurar UTF-8 */
+        /* configurar UTF-8 */
         System.setOut(new PrintStream(System.out, true, "UTF-8"));
         System.setErr(new PrintStream(System.err, true, "UTF-8"));
 
         if (args.length == 0) {
-            Tint.logFeedback("ASSINATURA", "Erro: Nenhum comando fornecido. Use 'sign' ou 'validate'.");
+            printErrorJson("Nenhum comando fornecido. Use 'server' ou passe um JSON estruturado.", "user", 400);
             return 1;
         }
 
-        String cmd = args[0];
-        String fileName = "";
-        int port = 8080;
-        long timeout = 5; // Default de 5 minutos conforme CLI Go
+        String firstArg = args[0];
 
-        // Parsing dos argumentos dependendo do comando
-        for (int i = 1; i < args.length; i++) {
-            String arg = args[i];
+        // se for o comando de servidor (mantém compatibilidade de args tradicionais)
+        if (firstArg.equals("server")) {
+            int port = 8080;
+            long timeout = 5;
 
-            if (arg.equals("--file")) {
-                if (i + 1 < args.length)
-                    fileName = args[++i];
-            } else if (arg.equals("--port") && cmd.equals("server")) {
-                if (i + 1 < args.length)
+            for (int i = 1; i < args.length; i++) {
+                if (args[i].equals("--port") && i + 1 < args.length) {
                     port = Integer.parseInt(args[++i]);
-            } else if (arg.equals("--timeout") && cmd.equals("server")) {
-                if (i + 1 < args.length)
+                } else if (args[i].equals("--timeout") && i + 1 < args.length) {
                     timeout = Long.parseLong(args[++i]);
-            } else if (arg.startsWith("-")) {
-                // Validação de flags desconhecidas
-                String suggestion = (arg.equals("-f") || arg.equals("--f")) ? " Você quis dizer '--file'?" : "";
-                Tint.logFeedback("ASSINATURA", "Erro: Flag '" + arg + "' não reconhecida." + suggestion);
-                return 1;
-            } else if (fileName.isEmpty() && cmd.equals("validate")) {
-                // Aceita posicional apenas no validate
-                fileName = arg;
+                }
             }
+
+            HttpServerService.start(port, timeout);
+            return 0;
         }
 
-        // Validação de obrigatoriedade
-        if (cmd.equals("sign")) {
-            boolean usedFileFlag = false;
-            for (String a : args)
-                if (a.equals("--file"))
-                    usedFileFlag = true;
+        // se for um comando de negócio (sign/validate), deve ser um JSON
+        if (!firstArg.trim().startsWith("{")) {
+            printErrorJson("O contrato de comunicação exige um objeto JSON como argumento.", "user", 400);
+            return 1;
+        }
 
-            if (!usedFileFlag || fileName.isEmpty()) {
-                Tint.logFeedback("ASSINATURA",
-                        "Erro do usuário: O parâmetro '--file' é obrigatório para o comando sign.");
-                return 1;
-            }
-        } else if (cmd.equals("validate") && fileName.isEmpty()) {
-            Tint.logFeedback("ASSINATURA", "Erro do usuário: Forneça o caminho do arquivo para validação.");
+        String jsonPayload = firstArg;
+        String cmd = extractFromJson(jsonPayload, "command");
+        String fileName = extractFromJson(jsonPayload, "file");
+
+        if (cmd == null || cmd.isEmpty()) {
+            printErrorJson("O parâmetro 'command' no JSON é obrigatório.", "user", 400);
+            return 1;
+        }
+        
+        if (fileName == null || fileName.isEmpty()) {
+            printErrorJson("O parâmetro 'file' no JSON é obrigatório.", "user", 400);
             return 1;
         }
 
         try {
-            switch (cmd) {
-                case "server":
-                    HttpServerService.start(port, timeout);
-                    break;
+            SignatureService service = ServiceFactory.getSignatureService();
 
+            switch (cmd) {
                 case "sign":
-                    System.out.println(SignatureService.sign(fileName));
+                    SignatureResult signRes = service.sign(fileName);
+                    System.out.println("""
+                        {
+                            "message": "Arquivo assinado com sucesso.",
+                            "fileName": "%s",
+                            "code": "%s",
+                            "signOutputPath": "%s",
+                            "status": 200
+                        }
+                        """.formatted(
+                            signRes.fileName().replace("\\", "/"), 
+                            signRes.code(), 
+                            signRes.filePath().replace("\\", "/")
+                        ));
                     break;
 
                 case "validate":
-                    System.out.println(SignatureService.validate(fileName));
+                    ValidationResult valRes = service.validate(fileName);
+                    System.out.println("""
+                        {
+                            "message": "Validação concluída.",
+                            "fileName": "%s",
+                            "code": "%s",
+                            "valid": %b,
+                            "status": 200
+                        }
+                        """.formatted(
+                            valRes.fileName().replace("\\", "/"), 
+                            valRes.code(), 
+                            valRes.valid()
+                        ));
                     break;
 
                 default:
-                    Tint.logFeedback("ASSINATURA", "Erro: Comando '" + cmd + "' não reconhecido.");
+                    printErrorJson("Comando '" + cmd + "' não reconhecido.", "user", 400);
                     return 1;
             }
         } catch (Exception e) {
-            Tint.logFeedback("ASSINATURA", "Erro do sistema: " + e.getMessage());
-            return 2;
+            boolean isUserError = e.getMessage().contains("não encontrado") || e.getMessage().contains("obrigatório") || e.getMessage().contains(".txt");
+            if (isUserError) {
+                printErrorJson(e.getMessage(), "user", 400);
+                return 1;
+            } else {
+                printErrorJson(e.getMessage(), "system", 500);
+                return 2;
+            }
         }
+
         return 0;
+    }
+
+    private static String extractFromJson(String json, String key) {
+        String pattern = "\"" + key + "\":\\s*\"([^\"]*)\"";
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(pattern).matcher(json);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        
+        return null;
+    }
+
+    private static void printErrorJson(String message, String type, int status) {
+        System.out.println("""
+            {
+                "error": "%s",
+                "status": %d,
+                "type": "%s"
+            }
+            """.formatted(message.replace("\"", "\\\""), status, type));
     }
 }

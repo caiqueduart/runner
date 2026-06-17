@@ -1,34 +1,39 @@
 package services;
 
-public class SignatureService {
-    SignatureService() {}
+import java.io.File;
+import java.io.FileWriter;
+import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.util.Scanner;
 
-    public static String sign(String fileName) throws Exception {
-        java.io.File file = new java.io.File(fileName);
+public class SignatureService {
+
+    public SignatureResult sign(String fileName) throws Exception {
+        File file = new File(fileName);
+
         if (!file.exists()) {
             throw new Exception("Arquivo '" + fileName + "' não encontrado.");
         }
 
-        String code = makeSimulatedSignCode(fileName);
+        String code = generateContentHash(file);
 
         String nameOnly = file.getName();
         String baseName = nameOnly.contains(".") ? nameOnly.substring(0, nameOnly.lastIndexOf('.')) : nameOnly;
         String extension = nameOnly.contains(".") ? nameOnly.substring(nameOnly.lastIndexOf('.') + 1) : "";
         String outputName = baseName + "-" + extension + "-assinatura.txt";
 
-        // Usamos o diretório de execução atual do processo Java
-        java.io.File outputFile = new java.io.File(System.getProperty("user.dir"), outputName);
-        try (java.io.FileWriter writer = new java.io.FileWriter(outputFile)) {
+        File outputFile = new File(System.getProperty("user.dir"), outputName);
+
+        try (FileWriter writer = new FileWriter(outputFile)) {
             writer.write(code);
         }
 
-        return formatSignatureMessage(fileName, code) + "\n" +
-               Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "Arquivo gerado em: " + Tint.GREEN + outputFile.getAbsolutePath() + Tint.RESET;
+        return new SignatureResult(fileName, code, outputFile.getAbsolutePath());
     }
 
+    public ValidationResult validate(String fileName) throws Exception {
+        File file = new File(fileName);
 
-    public static String validate(String fileName) throws Exception {
-        java.io.File file = new java.io.File(fileName);
         if (!file.exists()) {
             throw new Exception("Arquivo de assinatura '" + fileName + "' não encontrado.");
         }
@@ -38,23 +43,28 @@ public class SignatureService {
         }
 
         String code;
-        try (java.util.Scanner scanner = new java.util.Scanner(file)) {
+
+        try (Scanner scanner = new Scanner(file)) {
             if (!scanner.hasNext()) throw new Exception("Arquivo de assinatura vazio.");
             code = scanner.next();
         }
 
-        return formatValidationMessage(fileName, code);
+        return new ValidationResult(fileName, code, true);
     }
 
-    public static String formatSignatureMessage(String fileName, String signatureCode) {
-        return Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' gerou o código de assinatura '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
-    }
+    private String generateContentHash(File file) throws Exception {
+        byte[] content = Files.readAllBytes(file.toPath());
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(content);
+        
+        StringBuilder hexString = new StringBuilder();
 
-    public static String formatValidationMessage(String fileName, String signatureCode) {
-        return Tint.CYAN + "[ASSINATURA] " + Tint.RESET + "O Arquivo '" + Tint.GREEN + fileName + Tint.RESET + "' está assinado sob o código '" + Tint.GREEN + signatureCode + Tint.RESET + "'.";
-    }
-
-    public static String makeSimulatedSignCode(String fileName) {
-        return "SIGN-" + Math.abs(fileName.hashCode());
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        
+        return hexString.toString().substring(0, 12).toUpperCase(); // 12 chars prefix for simulation
     }
 }

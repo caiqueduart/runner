@@ -42,7 +42,7 @@ class HttpServerServiceTest {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        assertTrue(response.body().contains("Status: OK"));
+        assertTrue(response.body().contains("\"status\": \"OK\""));
     }
 
     @Test
@@ -50,14 +50,18 @@ class HttpServerServiceTest {
         Path testFile = tempDir.resolve("server-test.txt");
         Files.writeString(testFile, "conteudo para o servidor");
 
+        String jsonRequest = "{\"file\": \"" + testFile.toAbsolutePath().toString().replace("\\", "\\\\") + "\"}";
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + TEST_PORT + "/sign"))
-                .POST(HttpRequest.BodyPublishers.ofString(testFile.toAbsolutePath().toString()))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+                .header("Content-Type", "application/json")
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        assertTrue(response.body().contains("gerou o código de assinatura"));
+        assertTrue(response.body().contains("\"code\":"));
+        assertTrue(response.body().contains("\"status\": 200"));
 
         // Cleanup the generated signature file
         String expectedSignFileName = "server-test-txt-assinatura.txt";
@@ -69,12 +73,13 @@ class HttpServerServiceTest {
     void testSignEndpointEmptyBody() throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + TEST_PORT + "/sign"))
-                .POST(HttpRequest.BodyPublishers.ofString(""))
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .header("Content-Type", "application/json")
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(400, response.statusCode());
-        assertTrue(response.body().contains("Erro do usuário"));
+        assertTrue(response.body().contains("\"error\":"));
     }
 
     @Test
@@ -83,9 +88,11 @@ class HttpServerServiceTest {
         Files.writeString(testFile, "conteudo para validar");
 
         // Primeiro assina para gerar o arquivo
+        String signJsonRequest = "{\"file\": \"" + testFile.toAbsolutePath().toString().replace("\\", "\\\\") + "\"}";
         HttpRequest signRequest = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + TEST_PORT + "/sign"))
-                .POST(HttpRequest.BodyPublishers.ofString(testFile.toAbsolutePath().toString()))
+                .POST(HttpRequest.BodyPublishers.ofString(signJsonRequest))
+                .header("Content-Type", "application/json")
                 .build();
         client.send(signRequest, HttpResponse.BodyHandlers.ofString());
 
@@ -93,14 +100,16 @@ class HttpServerServiceTest {
         File signFile = new File(System.getProperty("user.dir"), signFileName);
 
         try {
+            String validateJsonRequest = "{\"file\": \"" + signFile.getAbsolutePath().replace("\\", "\\\\") + "\"}";
             HttpRequest validateRequest = HttpRequest.newBuilder()
                     .uri(URI.create("http://localhost:" + TEST_PORT + "/validate"))
-                    .POST(HttpRequest.BodyPublishers.ofString(signFile.getAbsolutePath()))
+                    .POST(HttpRequest.BodyPublishers.ofString(validateJsonRequest))
+                    .header("Content-Type", "application/json")
                     .build();
 
             HttpResponse<String> response = client.send(validateRequest, HttpResponse.BodyHandlers.ofString());
             assertEquals(200, response.statusCode());
-            assertTrue(response.body().contains("está assinado sob o código"));
+            assertTrue(response.body().contains("\"valid\": true"));
         } finally {
             if (signFile.exists()) signFile.delete();
         }
@@ -115,6 +124,6 @@ class HttpServerServiceTest {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        assertTrue(response.body().contains("Sinal de encerramento recebido"));
+        assertTrue(response.body().contains("\"message\": \"Sinal de encerramento recebido.\""));
     }
 }
