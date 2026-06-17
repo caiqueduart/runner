@@ -37,6 +37,11 @@ jobs:
             - name: Download dependências
               run: go mod download
 
+            - name: Executar Testes
+              run: |
+                  # Roda os testes apenas da pasta do simulador (se existirem)
+                  go test -v ./simulador/...
+
             - name: Extrair versão
               id: version
               shell: bash

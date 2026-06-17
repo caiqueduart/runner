@@ -37,6 +37,11 @@ jobs:
             - name: Download dependências
               run: go mod download
 
+            - name: Executar Testes
+              run: |
+                  # Roda os testes apenas da pasta da assinatura
+                  go test -v ./assinatura/...
+
             - name: Extrair versão
               id: version
               shell: bash
