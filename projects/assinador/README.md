@@ -1,18 +1,29 @@
-## Getting Started
+# Assinador (Core Java)
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+O **Assinador** é o componente central do sistema Runner. Ele é responsável pela lógica de assinatura digital e validação, podendo operar tanto como um utilitário de linha de comando quanto como um servidor HTTP persistente.
 
-## Folder Structure
+## Funcionalidades
 
-The workspace contains two folders by default, where:
+- **Assinatura Digital**: Gera códigos de assinatura baseados no conteúdo dos arquivos.
+- **Validação**: Verifica se um arquivo corresponde a um código de assinatura fornecido.
+- **Modo Servidor**: Expõe endpoints HTTP para integração com a CLI ou outros sistemas.
+- **Auto-desligamento**: Encerra-se automaticamente após um período de inatividade configurável.
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
+## Como Executar (Desenvolvimento)
 
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+```bash
+# Modo CLI (Assinar)
+java -cp bin App sign --file documento.txt
 
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+# Modo Servidor
+java -cp bin App server --port 8080 --timeout 5
+```
 
-## Dependency Management
+## Endpoints da API (Modo Servidor)
 
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+| Rota        | Método | Descrição                                                           |
+| :---------- | :----- | :------------------------------------------------------------------ |
+| `/sign`     | `POST` | Recebe o nome do arquivo no corpo e retorna o código de assinatura. |
+| `/validate` | `POST` | Recebe o nome do arquivo e valida a assinatura existente.           |
+| `/health`   | `GET`  | Retorna o status de saúde e tempo de atividade do servidor.         |
+| `/stop`     | `POST` | Encerra o servidor.                                                 |

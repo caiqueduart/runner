@@ -32,9 +32,9 @@ Este plano detalha as etapas de desenvolvimento do sistema **Runner**, integrand
 
 ### Sprint 4: Simulador e Integração PKCS#11
 
-- [ ] **Gestão do Simulador:** CLI deve baixar e gerenciar o ciclo de vida do `simulador.jar`.
-- [ ] **Integração PKCS#11:** Assinador configurado para usar o driver do simulador.
-- [ ] **Configuração Dinâmica:** Passagem de parâmetros de configuração do token via CLI.
+- [x] **Gestão do Simulador:** CLI deve baixar e gerenciar o ciclo de vida do `simulador.jar` (Implementado via `simulador-cli`).
+- [ ] **Integração PKCS#11:** Foco redirecionado para a gestão de infraestrutura e prontidão para drivers (US-03).
+- [x] **Configuração Dinâmica:** Passagem de parâmetros de configuração integrada ao fluxo de provisionamento.
 
 ### Sprint 5: Segurança Avançada e Refinamento
 
