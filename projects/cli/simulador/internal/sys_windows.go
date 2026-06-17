@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-// SetDetachedProcess configura o comando para rodar de forma independente no Windows.
+// configura o comando para rodar de forma independente no Windows.
 func SetDetachedProcess(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: 0x01000000 | // CREATE_BREAKAWAY_FROM_JOB

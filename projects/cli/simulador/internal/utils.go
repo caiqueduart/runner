@@ -13,19 +13,24 @@ import (
 	"strings"
 )
 
+// retorna o caminho para a pasta oculta .hubsaude no home do usuário,
+// usada para centralizar binários, JDK e arquivos de estado.
 func GetHubSaudeDir() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".hubsaude")
 }
 
+// retorna o caminho completo onde o simulador.jar deve ser armazenado.
 func GetSimuladorJarPath() string {
 	return filepath.Join(GetHubSaudeDir(), "bin", SimuladorJarName)
 }
 
+// retorna o caminho para a instalação gerenciada do JDK 21.
 func GetJDKDir() string {
 	return filepath.Join(GetHubSaudeDir(), "jdk")
 }
 
+// retorna o caminho do arquivo .pid usado para rastrear o processo em background.
 func GetPIDFilePath() string {
 	return filepath.Join(GetHubSaudeDir(), "simulador.pid")
 }
@@ -40,6 +45,7 @@ func checkFileSHA256(filePath string, expectedDigest string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	defer file.Close()
 
 	hash := sha256.New()
@@ -48,6 +54,7 @@ func checkFileSHA256(filePath string, expectedDigest string) (bool, error) {
 	}
 
 	calculatedHash := hex.EncodeToString(hash.Sum(nil))
+
 	return strings.EqualFold(calculatedHash, expectedHash), nil
 }
 
@@ -56,9 +63,11 @@ func extractZip(src, dest string) error {
 	if err != nil {
 		return err
 	}
+
 	defer r.Close()
 
 	var rootFolder string
+
 	if len(r.File) > 0 {
 		rootFolder = strings.Split(r.File[0].Name, "/")[0]
 	}
@@ -76,26 +85,36 @@ func extractZip(src, dest string) error {
 		outFile.Close()
 		rc.Close()
 	}
+
 	return nil
 }
 
 func extractTarGz(src, dest string) error {
 	f, _ := os.Open(src)
+
 	defer f.Close()
+
 	gzr, _ := gzip.NewReader(f)
+
 	defer gzr.Close()
+
 	tr := tar.NewReader(gzr)
 
 	var rootFolder string
+
 	for {
 		header, err := tr.Next()
+
 		if err == io.EOF {
 			break
 		}
+
 		if rootFolder == "" {
 			rootFolder = strings.Split(header.Name, "/")[0]
 		}
+
 		fpath := filepath.Join(dest, strings.TrimPrefix(header.Name, rootFolder))
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			os.MkdirAll(fpath, 0755)
@@ -106,5 +125,6 @@ func extractTarGz(src, dest string) error {
 			outFile.Close()
 		}
 	}
+
 	return nil
 }

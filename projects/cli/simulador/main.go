@@ -16,8 +16,8 @@ func main() {
 	}
 }
 
+// tenta carregar um arquivo .env subindo até 5 níveis de diretório. (modo desenvolvedor)
 func loadNativeEnv() {
-	// Procura pelo .env subindo até 5 níveis (para suportar execução de subpastas)
 	currDir, _ := os.Getwd()
 	envName := ".env"
 
@@ -37,14 +37,15 @@ func loadNativeEnv() {
 					os.Setenv(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
 				}
 			}
-			return // Sucesso
+			return // sucesso
 		}
 
-		// Sobe um nível
 		parentDir := filepath.Dir(currDir)
+
 		if parentDir == currDir {
-			break // Chegou na raiz do sistema
+			break // raiz do sistema
 		}
+
 		currDir = parentDir
 	}
 }

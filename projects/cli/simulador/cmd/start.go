@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// startCmd representa o comando para iniciar o simulador.
+// Ele executa o provisionamento automático (download) caso o simulador ou o JDK não existam.
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Inicia o simulador HubSaúde em background",

@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// stopCmd representa o comando para encerrar o simulador graciosamente.
+// Ele utiliza o endpoint /shutdown via HTTPS conforme especificado na US-03.
 var stopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Para o simulador HubSaúde",
