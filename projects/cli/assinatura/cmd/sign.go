@@ -16,19 +16,13 @@ var (
 var signCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Assina um documento",
-	FParseErrWhitelist: cobra.FParseErrWhitelist{
-		UnknownFlags: true,
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		runSign()
 	},
 }
 
 func runSign() {
-	// pega todos os argumentos após 'sign'
-	args := os.Args[2:]
-
-	output, err := internal.ExecJavaSigner("sign", args)
+	output, err := internal.ExecJavaSigner("sign", sFile, executionOptions())
 	if err != nil {
 		if jErr, ok := err.(*internal.JavaError); ok {
 			if jErr.Type == "user" {

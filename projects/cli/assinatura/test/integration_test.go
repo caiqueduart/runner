@@ -75,8 +75,8 @@ func TestSignValidationErrors(t *testing.T) {
 	if res.ExitCode != 1 {
 		t.Errorf("Esperado exit code 1, obtido %d", res.ExitCode)
 	}
-	if !ContainsIgnoringColors(res.Stdout, "parâmetro 'file' no JSON é obrigatório") {
-		t.Errorf("Esperado erro de obrigatoriedade, obtido: %s", res.Stdout)
+	if !ContainsIgnoringColors(res.Stderr, "unknown flag: --f") {
+		t.Errorf("Esperado erro de flag desconhecida, obtido: %s", res.Stderr)
 	}
 
 	// TC-06: Arquivo inexistente
@@ -89,6 +89,27 @@ func TestSignValidationErrors(t *testing.T) {
 	}
 	if !ContainsIgnoringColors(res.Stdout, "não encontrado") {
 		t.Errorf("Esperado erro de arquivo não encontrado, obtido: %s", res.Stdout)
+	}
+}
+
+func TestSignLocalMode(t *testing.T) {
+	CleanUpFiles("local-mode.txt", "local-mode-txt-assinatura.txt")
+	defer CleanUpFiles("local-mode.txt", "local-mode-txt-assinatura.txt")
+
+	absFile, err := CreateDummyFile("local-mode.txt", "conteúdo local")
+	if err != nil {
+		t.Fatalf("Erro ao criar arquivo: %v", err)
+	}
+
+	res, err := RunCLI("--local", "sign", "--file", absFile)
+	if err != nil {
+		t.Fatalf("Erro ao executar modo local: %v", err)
+	}
+	if res.ExitCode != 0 {
+		t.Fatalf("Esperado exit code 0, obtido %d. Stdout: %s Stderr: %s", res.ExitCode, res.Stdout, res.Stderr)
+	}
+	if !ContainsIgnoringColors(res.Stdout, "gerou o código de assinatura") {
+		t.Errorf("Mensagem de sucesso não encontrada: %s", res.Stdout)
 	}
 }
 

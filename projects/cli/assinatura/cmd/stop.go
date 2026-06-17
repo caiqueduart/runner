@@ -17,7 +17,7 @@ var stopCmd = &cobra.Command{
 
 func runStop() {
 	internal.LogFeedback("ASSINATURA SERVIDOR", "Encerrando servidor...")
-	_, err := internal.CallJavaServer("stop", "stop", "")
+	_, err := internal.CallJavaServer("stop", "stop", "", executionOptions())
 
 	if err != nil {
 		internal.LogFeedback("ASSINATURA SERVIDOR", "Aviso: Servidor já está desligado ou inacessível.")

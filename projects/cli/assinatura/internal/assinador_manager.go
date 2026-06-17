@@ -53,7 +53,8 @@ func isJava21(javaPath string) bool {
 		return false
 	}
 
-	return strings.Contains(string(output), "version \"21")
+	versionOutput := strings.TrimSpace(string(output))
+	return strings.Contains(versionOutput, "version \"21") || strings.HasPrefix(versionOutput, "javac 21")
 }
 
 func DownloadJava21(targetDir string) error {
@@ -253,24 +254,56 @@ func (e *ExecError) Error() string {
 	return e.Output
 }
 
-func CallJavaServer(endpoint string, cmdKey string, fileName string) (string, error) {
-	url := fmt.Sprintf("http://localhost:%s/%s", ServerPort, endpoint)
+type ExecutionOptions struct {
+	Local          bool
+	Port           int
+	TimeoutMinutes int
+}
+
+var signerHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+func (options ExecutionOptions) validate() error {
+	if options.Port < 1 || options.Port > 65535 {
+		return fmt.Errorf("porta inválida: %d; use um valor entre 1 e 65535", options.Port)
+	}
+	if options.TimeoutMinutes < 1 {
+		return fmt.Errorf("timeout inválido: %d; use ao menos 1 minuto", options.TimeoutMinutes)
+	}
+	return nil
+}
+
+func serverURL(port int, endpoint string) string {
+	return fmt.Sprintf("http://localhost:%d/%s", port, endpoint)
+}
+
+func CallJavaServer(endpoint string, cmdKey string, fileName string, options ExecutionOptions) (string, error) {
+	if err := options.validate(); err != nil {
+		return "", err
+	}
+
+	url := serverURL(options.Port, endpoint)
 
 	requestData := map[string]string{
 		"command": cmdKey,
 		"file":    fileName,
 		"flag":    "--file",
 	}
-	jsonData, _ := json.Marshal(requestData)
-
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	jsonData, err := json.Marshal(requestData)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("falha ao criar requisição JSON: %w", err)
+	}
+
+	resp, err := signerHTTPClient.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("falha ao chamar assinador em %s: %w", url, err)
 	}
 
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("falha ao ler resposta do assinador: %w", err)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
@@ -286,10 +319,25 @@ func CallJavaServer(endpoint string, cmdKey string, fileName string) (string, er
 // verifica se o servidor HTTP do assinador está ativo.
 // caso contrário, inicia-o em background e aguarda o status online.
 func EnsureServerRunning() error {
-	resp, err := http.Get("http://localhost:" + ServerPort + "/health")
+	return EnsureServerRunningWithOptions(ExecutionOptions{
+		Port:           DefaultServerPort,
+		TimeoutMinutes: DefaultServerTimeoutMinutes,
+	})
+}
+
+func EnsureServerRunningWithOptions(options ExecutionOptions) error {
+	if err := options.validate(); err != nil {
+		return err
+	}
+
+	healthURL := serverURL(options.Port, "health")
+	resp, err := signerHTTPClient.Get(healthURL)
 	if err == nil && resp.StatusCode == http.StatusOK {
 		resp.Body.Close()
 		return nil
+	}
+	if resp != nil {
+		resp.Body.Close()
 	}
 
 	LogFeedback("ASSINATURA CONFIG", "Servidor não detectado. Iniciando...")
@@ -300,15 +348,14 @@ func EnsureServerRunning() error {
 	}
 
 	var cmd *exec.Cmd
+	port := fmt.Sprintf("%d", options.Port)
+	timeout := fmt.Sprintf("%d", options.TimeoutMinutes)
 	if os.Getenv("DEV_MODE") == "true" {
-		assinadorDir := getAssinadorDir()
-
-		if assinadorDir == "" {
-			return fmt.Errorf("não foi possível localizar projects/assinador")
+		classesDir, err := compileDevAssinador()
+		if err != nil {
+			return err
 		}
-		srcDir := filepath.Join(assinadorDir, "src", "main", "java")
-		appJava := filepath.Join(srcDir, "App.java")
-		cmd = exec.Command(javaPath, "-cp", srcDir, appJava, "server", "--port", ServerPort, "--timeout", ServerTimeoutMinutes)
+		cmd = exec.Command(javaPath, "-cp", classesDir, "App", "server", "--port", port, "--timeout", timeout)
 
 	} else {
 		localJarPath := GetJarPath()
@@ -319,23 +366,35 @@ func EnsureServerRunning() error {
 			}
 		}
 
-		cmd = exec.Command(javaPath, "-jar", localJarPath, "server", "--port", ServerPort, "--timeout", ServerTimeoutMinutes)
+		cmd = exec.Command(javaPath, "-jar", localJarPath, "server", "--port", port, "--timeout", timeout)
 	}
 
+	logPath := filepath.Join(GetHubSaudeDir(), "assinador-server.log")
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		return fmt.Errorf("falha ao preparar logs do servidor: %w", err)
+	}
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("falha ao abrir log do servidor: %w", err)
+	}
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 	SetDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
+		logFile.Close()
 		return fmt.Errorf("falha ao iniciar servidor: %w", err)
 	}
+	logFile.Close()
 
 	if cmd.Process != nil {
-		savePID(cmd.Process.Pid, ServerPort)
+		savePID(cmd.Process.Pid, port)
 		cmd.Process.Release()
 	}
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(500 * time.Millisecond)
-		resp, err := http.Get("http://localhost:" + ServerPort + "/health")
+		resp, err := signerHTTPClient.Get(healthURL)
 
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
@@ -345,7 +404,11 @@ func EnsureServerRunning() error {
 		}
 	}
 
-	return fmt.Errorf("timeout ao aguardar o servidor subir")
+	diagnostic, _ := os.ReadFile(logPath)
+	if message := strings.TrimSpace(string(diagnostic)); message != "" {
+		return fmt.Errorf("timeout ao aguardar o servidor subir; diagnóstico: %s", message)
+	}
+	return fmt.Errorf("timeout ao aguardar o servidor subir; consulte %s", logPath)
 }
 
 func getAssinadorDir() string {
@@ -366,94 +429,87 @@ func getAssinadorDir() string {
 	return ""
 }
 
+func compileDevAssinador() (string, error) {
+	assinadorDir := getAssinadorDir()
+	if assinadorDir == "" {
+		return "", fmt.Errorf("não foi possível localizar projects/assinador")
+	}
+
+	srcDir := filepath.Join(assinadorDir, "src", "main", "java")
+	serviceSources, err := filepath.Glob(filepath.Join(srcDir, "services", "*.java"))
+	if err != nil {
+		return "", fmt.Errorf("falha ao localizar fontes Java: %w", err)
+	}
+	sources := append([]string{
+		filepath.Join(srcDir, "App.java"),
+		filepath.Join(srcDir, "Version.java"),
+	}, serviceSources...)
+
+	classesDir := filepath.Join(assinadorDir, "target", "dev-classes")
+	if err := os.MkdirAll(classesDir, 0755); err != nil {
+		return "", fmt.Errorf("falha ao criar diretório de classes: %w", err)
+	}
+
+	javacPath, err := GetJavaPath("javac")
+	if err != nil {
+		return "", err
+	}
+	args := append([]string{"-d", classesDir}, sources...)
+	output, err := exec.Command(javacPath, args...).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("falha ao compilar Assinador em modo desenvolvedor: %s", strings.TrimSpace(string(output)))
+	}
+	return classesDir, nil
+}
+
 // orquestra a execução da assinatura/validação.
 // tenta usar o modo servidor (HTTP) e regride para modo local (JAR direto) se necessário.
-func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
-	// MODO DESENVOLVEDOR: Executa direto do .java se a variável DEV_MODE=true no arquivo .env
-	if os.Getenv("DEV_MODE") == "true" {
-		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo App.java).")
-
-		assinadorDir := getAssinadorDir()
-		if assinadorDir == "" {
-			return "", fmt.Errorf("não foi possível localizar projects/assinador")
-		}
-
-		srcDir := filepath.Join(assinadorDir, "src", "main", "java")
-		appJava := filepath.Join(srcDir, "App.java")
-
-		fileName := ""
-		for i, arg := range cmdArgs {
-			if arg == "--file" && i+1 < len(cmdArgs) {
-				fileName = cmdArgs[i+1]
-			} else if !strings.HasPrefix(arg, "-") && cmdKey == "validate" {
-				fileName = arg
-			}
-		}
-
-		requestData := map[string]string{
-			"command": cmdKey,
-			"file":    fileName,
-			"flag":    "--file",
-		}
-		jsonData, _ := json.Marshal(requestData)
-
-		args := []string{"-cp", srcDir, appJava, string(jsonData)}
-		javaCmd := exec.Command("java", args...)
-
-		output, err := javaCmd.CombinedOutput()
-
-		if err != nil {
-			if exitError, ok := err.(*exec.ExitError); ok {
-				var errResp ErrorResponse
-				if parseErr := json.Unmarshal(output, &errResp); parseErr == nil && errResp.Error != "" {
-					return "", &JavaError{Msg: errResp.Error, Type: errResp.Type}
-				}
-				return "", &ExecError{Output: string(output), Code: exitError.ExitCode()}
-			}
-			return "", err
-		}
-
-		return string(output), nil
+func ExecJavaSigner(cmdKey string, fileName string, options ExecutionOptions) (string, error) {
+	if err := options.validate(); err != nil {
+		return "", err
 	}
-
-	if err := EnsureServerRunning(); err == nil {
-		fileName := ""
-
-		for i, arg := range cmdArgs {
-			if arg == "--file" && i+1 < len(cmdArgs) {
-				fileName = cmdArgs[i+1]
-			} else if !strings.HasPrefix(arg, "-") && cmdKey == "validate" {
-				fileName = arg
-			}
-		}
-
-		return CallJavaServer(cmdKey, cmdKey, fileName)
+	if options.Local {
+		return execLocalSigner(cmdKey, fileName)
 	}
-
-	LogFeedback("ASSINATURA CONFIG", "Servidor indisponível. Usando modo local...")
-
-	javaPath, _ := GetJavaPath("java")
-	localJarPath := GetJarPath()
-
-	fileName := ""
-	for i, arg := range cmdArgs {
-		if arg == "--file" && i+1 < len(cmdArgs) {
-			fileName = cmdArgs[i+1]
-		} else if !strings.HasPrefix(arg, "-") && cmdKey == "validate" {
-			fileName = arg
-		}
+	if err := EnsureServerRunningWithOptions(options); err != nil {
+		return "", fmt.Errorf("modo servidor indisponível: %w; use --local para execução direta", err)
 	}
+	return CallJavaServer(cmdKey, cmdKey, fileName, options)
+}
 
+func execLocalSigner(cmdKey string, fileName string) (string, error) {
 	requestData := map[string]string{
 		"command": cmdKey,
 		"file":    fileName,
 		"flag":    "--file",
 	}
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		return "", fmt.Errorf("falha ao criar requisição JSON: %w", err)
+	}
 
-	jsonData, _ := json.Marshal(requestData)
+	javaPath, err := GetJavaPath("java")
+	if err != nil {
+		return "", err
+	}
 
-	args := []string{"-jar", localJarPath, string(jsonData)}
-	javaCmd := exec.Command(javaPath, args...)
+	var javaCmd *exec.Cmd
+	if os.Getenv("DEV_MODE") == "true" {
+		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo App.java).")
+		classesDir, err := compileDevAssinador()
+		if err != nil {
+			return "", err
+		}
+		javaCmd = exec.Command(javaPath, "-cp", classesDir, "App", string(jsonData))
+	} else {
+		localJarPath := GetJarPath()
+		if _, err := os.Stat(localJarPath); os.IsNotExist(err) {
+			if err := DownloadAssinadorJar(localJarPath); err != nil {
+				return "", err
+			}
+		}
+		javaCmd = exec.Command(javaPath, "-jar", localJarPath, string(jsonData))
+	}
 
 	output, err := javaCmd.CombinedOutput()
 	if err != nil {

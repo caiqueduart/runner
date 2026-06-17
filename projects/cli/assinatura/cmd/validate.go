@@ -13,19 +13,18 @@ var validateCmd = &cobra.Command{
 	Use:   "validate [file]",
 	Short: "Valida a assinatura de um documento",
 	Args:  cobra.MaximumNArgs(1),
-	FParseErrWhitelist: cobra.FParseErrWhitelist{
-		UnknownFlags: true,
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-		runValidate()
+		runValidate(args)
 	},
 }
 
-func runValidate() {
-	// os.Args[2:] pega tudo após 'validate'
-	args := os.Args[2:]
+func runValidate(args []string) {
+	fileName := ""
+	if len(args) == 1 {
+		fileName = args[0]
+	}
 
-	output, err := internal.ExecJavaSigner("validate", args)
+	output, err := internal.ExecJavaSigner("validate", fileName, executionOptions())
 
 	if err != nil {
 		if jErr, ok := err.(*internal.JavaError); ok {
