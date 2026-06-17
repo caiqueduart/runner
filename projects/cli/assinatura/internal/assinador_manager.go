@@ -146,16 +146,22 @@ func DownloadAssinadorJar(targetPath string) error {
 	}
 
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
+	out, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("falha ao criar arquivo local: %w", err)
+	}
+	defer out.Close()
 
-	out, _ := os.Create(targetPath)
-
-	resp, _ = http.Get(jarURL)
-
+	resp, err = http.Get(jarURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("falha ao baixar JAR da release: %v (Status: %v)", err, resp.StatusCode)
+	}
 	defer resp.Body.Close()
 
-	io.Copy(out, resp.Body)
-
-	out.Close()
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return fmt.Errorf("falha ao salvar conteúdo do JAR: %w", err)
+	}
 
 	if digest != "" {
 		LogFeedback("ASSINATURA CONFIG", "Validando integridade...")
