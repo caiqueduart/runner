@@ -8,5 +8,3 @@ const (
 	SimuladorTag               = "hubsaude-simulador-v0.1.7"
 	SimuladorJarName           = "hubsaude-simulador-0.1.7.jar"
 )
-
-// 2
