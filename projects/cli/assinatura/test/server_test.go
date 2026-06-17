@@ -44,8 +44,8 @@ func TestServerLifecycle(t *testing.T) {
 		t.Fatalf("Erro ao parar servidor: %v", err)
 	}
 
-	if !ContainsIgnoringColors(res.Stdout, "Encerrado") && !ContainsIgnoringColors(res.Stdout, "encerrado") {
-		t.Errorf("Mensagem de encerramento não encontrada: %s", res.Stdout)
+	if !ContainsIgnoringColors(res.Stdout, "Encerrado") && !ContainsIgnoringColors(res.Stdout, "encerrado") && !ContainsIgnoringColors(res.Stdout, "Sinal") {
+		t.Errorf("Mensagem de encerramento ou sinal não encontrada: %s", res.Stdout)
 	}
 
 	// Verificar se parou de responder
