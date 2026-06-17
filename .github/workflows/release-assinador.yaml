@@ -30,14 +30,13 @@ jobs:
               with:
                   java-version: '21'
                   distribution: 'temurin'
-                  cache: 'maven'
 
             - name: Extrair versão do Java
               id: version
               shell: bash
               run: |
                   # Extrai a versão a partir do arquivo Version.java
-                  RAW_VERSION=$(grep -oP 'public static final String APP_VERSION = "\K[^"]+' src/main/Version.java)
+                  RAW_VERSION=$(grep -oP 'public static final String APP_VERSION = "\K[^"]+' src/Version.java)
                   VERSION="assinador-v$RAW_VERSION"
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
                   echo "RAW_VERSION=$RAW_VERSION" >> $GITHUB_ENV
@@ -49,13 +48,18 @@ jobs:
                     echo "TAG_EXISTS=false" >> $GITHUB_ENV
                   fi
 
-            - name: Sincronizar versão no pom.xml
+            - name: Compilar e Gerar JAR
               if: env.TAG_EXISTS == 'false'
-              run: mvn versions:set -DnewVersion=${{ env.RAW_VERSION }} -DgenerateBackupPoms=false
+              run: |
+                  mkdir -p bin
+                  # Compila todos os arquivos .java do src
+                  javac -d bin src/App.java src/Version.java src/services/*.java
 
-            - name: Build com Maven
-              if: env.TAG_EXISTS == 'false'
-              run: mvn clean package
+                  # Cria o manifesto com a Main-Class
+                  echo "Main-Class: App" > manifest.txt
+
+                  # Gera o JAR na raiz da pasta do projeto
+                  jar cvfm assinador-v${{ env.RAW_VERSION }}.jar manifest.txt -C bin .
 
             - name: Upload para Release
               uses: softprops/action-gh-release@v2
@@ -65,4 +69,4 @@ jobs:
                   name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
                   files: |
-                      projects/assinador/target/assinador-v${{ env.RAW_VERSION }}.jar
+                      projects/assinador/assinador-v${{ env.RAW_VERSION }}.jar
