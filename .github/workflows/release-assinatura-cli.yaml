@@ -1,11 +1,11 @@
-name: Release CLIs GO
+name: Release Assinatura CLI GO
 
 on:
     push:
         branches:
             - main
         paths:
-            - 'projects/cli/**'
+            - 'projects/cli/assinatura/**'
 
 permissions:
     contents: write
@@ -56,7 +56,7 @@ jobs:
             - name: Compilar (Build)
               if: env.TAG_EXISTS == 'false'
               run: |
-                  BINARY_NAME=assinatura-cli-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  BINARY_NAME=${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
                   if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
 
                   echo "FINAL_BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV

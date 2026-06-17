@@ -1,0 +1,82 @@
+name: Release Simulador CLI GO
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - 'projects/cli/simulador/**'
+
+permissions:
+    contents: write
+
+jobs:
+    build:
+        name: Build multi plataforma
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                goos: [linux, windows, darwin] # Linux, Windows e macOS
+                goarch: [amd64]
+
+        defaults:
+            run:
+                working-directory: projects/cli
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Configurar Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: '1.26.x'
+
+            - name: Download dependências
+              run: go mod download
+
+            - name: Extrair versão
+              id: version
+              shell: bash
+              run: |
+                  # Extrai a versão a partir do código Go do Simulador
+                  RAW_VERSION=$(grep -oP 'SimuladorCLIVersion\s+= "\K[^"]+' simulador/internal/constants.go)
+                  VERSION="simulador-cli-v$RAW_VERSION"
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+                  # Verifica se a tag já existe no repositório
+                  if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
+                      echo "TAG_EXISTS=true" >> $GITHUB_ENV
+                  else
+                      echo "TAG_EXISTS=false" >> $GITHUB_ENV
+                  fi
+
+            - name: Compilar (Build)
+              if: env.TAG_EXISTS == 'false'
+              run: |
+                  BINARY_NAME=${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+                  if [ "${{ matrix.goos }}" = "windows" ]; then BINARY_NAME=$BINARY_NAME.exe; fi
+
+                  echo "FINAL_BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
+
+                  # Entra na pasta do CLI e compila o binário do simulador
+                  GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $BINARY_NAME ./simulador
+
+            - name: Upload de artefatos
+              if: env.TAG_EXISTS == 'false'
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ env.FINAL_BINARY_NAME }}
+                  path: projects/cli/${{ env.FINAL_BINARY_NAME }}
+
+            - name: Upload dos binários para a Release e adiciona tag
+              uses: softprops/action-gh-release@v2
+              if: env.TAG_EXISTS == 'false'
+              with:
+                  tag_name: '${{ env.VERSION }}'
+                  name: 'Release ${{ env.VERSION }}'
+                  generate_release_notes: true
+                  files: |
+                      projects/cli/${{ env.FINAL_BINARY_NAME }}
