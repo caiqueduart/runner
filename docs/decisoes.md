@@ -39,14 +39,14 @@ Este documento registra as decisões arquiteturais e técnicas tomadas durante o
 
 ---
 
-**Decisão:** Uso de Java 21 e Virtual Threads (Project Loom).
+**Decisão:** Separação de UI e Contrato de Integração (JSON).
 
-- **Diferença:** O servidor Java utiliza `Executors.newVirtualThreadPerTaskExecutor()` para processar requisições HTTP.
-- **Justificativa:** Permite que o servidor lide com alta concorrência de forma extremamente leve, sem o overhead de pools de threads tradicionais, aproveitando as funcionalidades mais modernas do JDK 21 para performance.
+- **Diferença:** O servidor Java não envia strings via HTTP. Toda a comunicação entre a CLI e o servidor é feita através de objetos JSON.
+- **Justificativa:** Melhora a interoperabilidade (outros clientes podem consumir a API). A responsabilidade de "como exibir os dados" passa a ser exclusivamente do cliente (CLI Go), enquanto o servidor foca apenas em "quais dados retornar".
 
 ---
 
-**Decisão:** Verificação de Integridade via SHA256.
+**Decisão:** Uso de Java 21 Records e Text Blocks.
 
-- **Diferença:** Todos os downloads de artefatos realizados pela CLI são validados com um hash SHA256, e todos os arterfatos enviados ao repositório são assinados automaticamente pelo GitHub.
-- **Justificativa:** Segurança e robustez. Garante que o binário baixado não foi corrompido ou alterado maliciosamente durante o transporte.
+- **Diferença:** Uso de `record` para modelos de dados e `Text Blocks` para geração manual de JSON sem dependências externas.
+- **Justificativa:** Aproveita as funcionalidades modernas do Java 21 para manter o código limpo, seguro e o artefato JAR extremamente leve, sem necessidade de bibliotecas como Jackson ou Gson.

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"runner/assinatura/internal"
@@ -25,16 +26,37 @@ var signCmd = &cobra.Command{
 
 func runSign() {
 	// pega todos os argumentos após 'sign'
-	// os.Args[0] = cli, os.Args[1] = sign, os.Args[2:] = restante
 	args := os.Args[2:]
 
 	output, err := internal.ExecJavaSigner("sign", args)
 	if err != nil {
-		fmt.Print(err)
+		if jErr, ok := err.(*internal.JavaError); ok {
+			if jErr.Type == "user" {
+				internal.LogFeedback("ASSINATURA", "Erro do usuário: %s", jErr.Msg)
+				os.Exit(1)
+			} else {
+				internal.LogFeedback("ASSINATURA", "Erro do sistema: %s", jErr.Msg)
+				os.Exit(2)
+			}
+		} else if execErr, ok := err.(*internal.ExecError); ok {
+			fmt.Print(execErr.Output)
+			os.Exit(execErr.Code)
+		}
+		internal.LogFeedback("ASSINATURA", "Erro: %v", err)
+		os.Exit(2)
+	}
+
+	// tenta decodificar como JSON (sucesso)
+	var res internal.SignatureResponse
+	if err := json.Unmarshal([]byte(output), &res); err == nil && res.Code != "" {
+		fmt.Printf("\x1b[36m[ASSINATURA]\x1b[0m %s\n", res.Message)
+		fmt.Printf("\x1b[36m[ASSINATURA]\x1b[0m O Arquivo '\x1b[32m%s\x1b[0m' gerou o código de assinatura '\x1b[32m%s\x1b[0m'.\n", res.FileName, res.Code)
+		fmt.Printf("\x1b[36m[ASSINATURA]\x1b[0m Arquivo gerado em: \x1b[32m%s\x1b[0m\n", res.SignOutputPath)
 		return
 	}
 
-	fmt.Println(output)
+	// se não for JSON ou falhar, imprime o output bruto (preserva cores do JAR se houver)
+	fmt.Print(output)
 }
 
 func init() {

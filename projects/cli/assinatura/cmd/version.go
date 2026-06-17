@@ -12,7 +12,8 @@ var versionCmd = &cobra.Command{
 	Short: "Exibe a versão atual do CLI",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Assinatura CLI - Versão: %s\n", internal.AssinaturaCLIVersion)
+		fmt.Printf("Assinatura CLI v%s\n", internal.AssinaturaCLIVersion)
+		fmt.Printf("Compatível com Assinador JAR v%s\n", internal.CompatibleAssinadorVersion)
 	},
 }
 

@@ -53,8 +53,13 @@ Para rodar os testes de integração (requer o Assinador disponível no GitHub o
 go test -v ./test/...
 ```
 
-## Observações
+## Arquitetura de Integração
 
-- **Execução**: Nos exemplos acima, o comando `assinatura` refere-se ao nome do arquivo binário baixado. Por exemplo, no Windows, o uso real seria: `.\assinatura-cli-v1.1.3-windows-amd64.exe sign --file receita.json`.
-- **Modo Servidor**: A CLI prioriza a comunicação via HTTP (porta 8080) para maior performance em execuções repetitivas.
-- **Rastreabilidade**: O PID do servidor em execução é armazenado em `~/.hubsaude/assinador.pid`.
+A CLI de Assinatura utiliza um contrato de comunicação estrito e bidirecional baseado em **JSON**.
+
+- A CLI envia requisições em formato JSON (`{"command": "sign", "file": "..."}`) e recebe respostas em JSON. Isso se aplica tanto na comunicação via rede (Servidor HTTP na porta 8080) quanto na execução direta do `.jar` via subprocesso.
+- O servidor Java atua puramente como um motor de dados de negócio. A CLI em Go lê os campos JSON de sucesso ou erro e aplica a formatação visual (Cores ANSI) para o usuário final.
+- O Java classifica os erros estruturalmente no JSON (ex: `type: "user"` ou `type: "system"`). A CLI captura isso e traduz para Exit Codes de Unix padronizados:
+    - `Exit Code 1`: Erros de validação ou entrada do usuário (ex: arquivo não encontrado).
+    - `Exit Code 2`: Erros de execução do sistema.
+- **Interoperabilidade**: Outras aplicações (como Frontends ou painéis Python) podem invocar a API HTTP local na porta 8080 recebendo dados limpos e perfeitamente tipados.
