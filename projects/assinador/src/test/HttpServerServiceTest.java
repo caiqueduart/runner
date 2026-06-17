@@ -119,7 +119,7 @@ class HttpServerServiceTest {
     void testStopEndpoint() throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + TEST_PORT + "/stop"))
-                .GET()
+                .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());

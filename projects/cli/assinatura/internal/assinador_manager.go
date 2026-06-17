@@ -86,17 +86,35 @@ func DownloadJava21(targetDir string) error {
 	downloadUrl := releases[0]["binaries"].([]interface{})[0].(map[string]interface{})["package"].(map[string]interface{})["link"].(string)
 	LogFeedback("ASSINATURA CONFIG", "Baixando JDK...")
 
-	os.MkdirAll(targetDir, 0755)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("falha ao criar diretório do JDK: %w", err)
+	}
 	tmpFile := filepath.Join(os.TempDir(), "jdk21_download"+filepath.Ext(downloadUrl))
-	out, _ := os.Create(tmpFile)
+	out, err := os.Create(tmpFile)
+	if err != nil {
+		return fmt.Errorf("falha ao criar arquivo temporário do JDK: %w", err)
+	}
 
 	defer os.Remove(tmpFile)
 
-	resp, _ = http.Get(downloadUrl)
+	resp, err = http.Get(downloadUrl)
+	if err != nil {
+		out.Close()
+		return fmt.Errorf("falha ao baixar JDK: %w", err)
+	}
 
 	defer resp.Body.Close()
-	io.Copy(out, resp.Body)
-	out.Close()
+	if resp.StatusCode != http.StatusOK {
+		out.Close()
+		return fmt.Errorf("falha ao baixar JDK: status HTTP %d", resp.StatusCode)
+	}
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		out.Close()
+		return fmt.Errorf("falha ao salvar JDK: %w", err)
+	}
+	if err := out.Close(); err != nil {
+		return fmt.Errorf("falha ao finalizar arquivo do JDK: %w", err)
+	}
 
 	LogFeedback("ASSINATURA CONFIG", "Extraindo arquivos...")
 

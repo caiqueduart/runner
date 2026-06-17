@@ -21,6 +21,12 @@ var httpClient = &http.Client{
 	},
 }
 
+var simuladorBaseURL = fmt.Sprintf("https://localhost:%s", SimuladorPort)
+
+func simuladorURL(path string) string {
+	return simuladorBaseURL + path
+}
+
 func IsPortAvailable(port string) bool {
 	ln, err := net.Listen("tcp", ":"+port)
 
@@ -110,18 +116,35 @@ func DownloadJava21(targetDir string) error {
 
 	LogFeedback("SIMULADOR CONFIG", "Baixando JDK...")
 
-	os.MkdirAll(targetDir, 0755)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("falha ao criar diretório do JDK: %w", err)
+	}
 	tmpFile := filepath.Join(os.TempDir(), "jdk21_download"+filepath.Ext(downloadUrl))
-	out, _ := os.Create(tmpFile)
+	out, err := os.Create(tmpFile)
+	if err != nil {
+		return fmt.Errorf("falha ao criar arquivo temporário do JDK: %w", err)
+	}
 
 	defer os.Remove(tmpFile)
 
-	resp, _ = http.Get(downloadUrl)
+	resp, err = http.Get(downloadUrl)
+	if err != nil {
+		out.Close()
+		return fmt.Errorf("falha ao baixar JDK: %w", err)
+	}
 
 	defer resp.Body.Close()
-
-	io.Copy(out, resp.Body)
-	out.Close()
+	if resp.StatusCode != http.StatusOK {
+		out.Close()
+		return fmt.Errorf("falha ao baixar JDK: status HTTP %d", resp.StatusCode)
+	}
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		out.Close()
+		return fmt.Errorf("falha ao salvar JDK: %w", err)
+	}
+	if err := out.Close(); err != nil {
+		return fmt.Errorf("falha ao finalizar arquivo do JDK: %w", err)
+	}
 
 	LogFeedback("SIMULADOR CONFIG", "Extraindo arquivos...")
 
@@ -167,7 +190,7 @@ func DownloadSimuladorJar(targetPath string) error {
 // após validar a porta e provisionar os arquivos necessários.
 func EnsureSimuladorRunning() error {
 	// verifica se já está respondendo via HTTPS
-	url := fmt.Sprintf("https://localhost:%s/api/info", SimuladorPort)
+	url := simuladorURL("/api/info")
 	resp, err := httpClient.Get(url)
 	if err == nil && resp.StatusCode == http.StatusOK {
 		resp.Body.Close()
@@ -238,7 +261,7 @@ func ClearPIDFile() {
 }
 
 func StopSimulador() error {
-	url := fmt.Sprintf("https://localhost:%s/shutdown", SimuladorPort)
+	url := simuladorURL("/shutdown")
 	resp, err := httpClient.Post(url, "text/plain", nil)
 	if err != nil {
 		return fmt.Errorf("falha ao enviar comando de parada: %w", err)
@@ -256,7 +279,7 @@ func StopSimulador() error {
 }
 
 func GetSimuladorStatus() (string, error) {
-	url := fmt.Sprintf("https://localhost:%s/api/info", SimuladorPort)
+	url := simuladorURL("/api/info")
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return "", err
@@ -281,7 +304,7 @@ func DownloadDriver() error {
 	targetPath := filepath.Join(GetHubSaudeDir(), "bin", driverName)
 
 	LogFeedback("SIMULADOR CONFIG", "Baixando driver PKCS#11 do simulador...")
-	url := fmt.Sprintf("https://localhost:%s/api/driver", SimuladorPort)
+	url := simuladorURL("/api/driver")
 
 	resp, err := httpClient.Get(url)
 	if err != nil {

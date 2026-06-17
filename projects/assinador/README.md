@@ -11,6 +11,16 @@ O **Assinador** é o componente central do sistema Runner. Ele é responsável p
 
 ## Como Executar (Desenvolvimento)
 
+Pré-requisitos: JDK 21 e Maven 3.9 ou superior.
+
+```bash
+# Compilar e executar todos os testes
+mvn verify
+
+# O JAR executável será criado em target/assinador-v1.0.5.jar
+java -jar target/assinador-v1.0.5.jar '{"command":"sign","file":"documento.txt"}'
+```
+
 O `App.java` exige que as requisições, mesmo via terminal, sejam feitas em formato **JSON**, garantindo um contrato unificado com a API HTTP.
 
 ```bash

@@ -66,27 +66,17 @@ public class HttpServerService {
     }
 
     public static void stop() {
-        stopServer(false);
+        stopServer();
     }
 
     private static void stopServer() {
-        stopServer(true);
-    }
-
-    private static void stopServer(boolean exit) {
-        try {
-            if (scheduler != null) {
-                scheduler.shutdownNow();
-            }
-            if (server != null) {
-                server.stop(0);
-            }
-        } finally {
-            logServerEvent("INFO", "Encerrado.");
-            if (exit) {
-                System.exit(0);
-            }
+        if (scheduler != null) {
+            scheduler.shutdownNow();
         }
+        if (server != null) {
+            server.stop(0);
+        }
+        logServerEvent("INFO", "Encerrado.");
     }
 
     static class SignHandler implements HttpHandler {
@@ -237,6 +227,10 @@ public class HttpServerService {
     static class StopHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
             sendJsonResponse(exchange, """
                 {
                     "message": "Sinal de encerramento recebido.",

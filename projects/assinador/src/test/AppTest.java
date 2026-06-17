@@ -34,7 +34,7 @@ class AppTest {
         Path testFile = tempDir.resolve("app-test.txt");
         Files.writeString(testFile, "app test content");
 
-        int status = App.run(new String[]{"sign", "--file", testFile.toAbsolutePath().toString()});
+        int status = App.run(new String[]{request("sign", testFile)});
         assertEquals(0, status, "Deve retornar sucesso para comando sign válido");
 
         // Cleanup
@@ -49,13 +49,13 @@ class AppTest {
         Files.writeString(testFile, "app validate content");
 
         // Gera a assinatura primeiro
-        App.run(new String[]{"sign", "--file", testFile.toAbsolutePath().toString()});
+        App.run(new String[]{request("sign", testFile)});
         
         String signFileName = "app-validate-txt-assinatura.txt";
         File signFile = new File(System.getProperty("user.dir"), signFileName);
 
         try {
-            int status = App.run(new String[]{"validate", signFile.getAbsolutePath()});
+            int status = App.run(new String[]{request("validate", signFile.toPath())});
             assertEquals(0, status, "Deve retornar sucesso para comando validate válido");
         } finally {
             if (signFile.exists()) signFile.delete();
@@ -66,5 +66,10 @@ class AppTest {
     void testRunInvalidFlag() throws Exception {
         int status = App.run(new String[]{"sign", "-f", "somefile.txt"});
         assertEquals(1, status, "Deve retornar erro para flag inválida -f");
+    }
+
+    private String request(String command, Path file) {
+        String normalizedPath = file.toAbsolutePath().toString().replace("\\", "/");
+        return "{\"command\":\"%s\",\"file\":\"%s\"}".formatted(command, normalizedPath);
     }
 }

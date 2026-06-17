@@ -50,3 +50,17 @@ Este documento registra as decisões arquiteturais e técnicas tomadas durante o
 
 - **Diferença:** Uso de `record` para modelos de dados e `Text Blocks` para geração manual de JSON sem dependências externas.
 - **Justificativa:** Aproveita as funcionalidades modernas do Java 21 para manter o código limpo, seguro e o artefato JAR extremamente leve, sem necessidade de bibliotecas como Jackson ou Gson.
+
+---
+
+**Decisão:** Trunk-Based Development com commits diretos na `main`.
+
+- **Diferença:** A branch `main` é o único trunk, commits pequenos e atômicos são enviados diretamente, sem branches de funcionalidade ou pull requests.
+- **Justificativa:** O [Trunk-Based Development](https://trunkbaseddevelopment.com/) reduz cerimônia e conflitos em um projeto individual. O CI executado após cada push detecta regressões, que devem ser corrigidas ou revertidas imediatamente.
+
+---
+
+**Decisão:** Release orientada pela versão de cada componente.
+
+- **Diferença:** Assinador, CLI Assinatura e CLI Simulador possuem versões independentes, alterar uma versão cria automaticamente sua tag SemVer e GitHub Release.
+- **Justificativa:** O modelo mantém CI em todo commit e entrega contínua controlada por versão. Alterações sem incremento executam o CI, mas não publicam release.

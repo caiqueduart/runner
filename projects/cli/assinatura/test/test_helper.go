@@ -19,24 +19,24 @@ type CmdResult struct {
 func RunCLI(args ...string) (*CmdResult, error) {
 	// Caminho para o main.go (estamos em projects/cli/assinatura/test)
 	mainPath := filepath.Join("..", "main.go")
-	
+
 	// Prepara o comando: go run ../main.go [args]
 	cmdArgs := append([]string{"run", mainPath}, args...)
 	cmd := exec.Command("go", cmdArgs...)
-	
+
 	// Captura buffers
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	// Executa
 	err := cmd.Run()
-	
+
 	result := &CmdResult{
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),
 	}
-	
+
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitError.ExitCode()
@@ -46,7 +46,7 @@ func RunCLI(args ...string) (*CmdResult, error) {
 	} else {
 		result.ExitCode = 0
 	}
-	
+
 	return result, nil
 }
 

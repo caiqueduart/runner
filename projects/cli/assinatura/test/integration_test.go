@@ -60,9 +60,10 @@ func TestSignValidationErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Erro: %v", err)
 	}
-	// O exit code vem do JAR (ou do wrapper que detectou falha no JAR)
-	// Como a validação é no JAR, esperamos que ele retorne erro
-	if !ContainsIgnoringColors(res.Stdout, "Erro do usuário: O parâmetro '--file' é obrigatório") {
+	if res.ExitCode != 1 {
+		t.Errorf("Esperado exit code 1, obtido %d", res.ExitCode)
+	}
+	if !ContainsIgnoringColors(res.Stdout, "Erro do usuário: O parâmetro 'file' no JSON é obrigatório.") {
 		t.Errorf("Esperado erro de parâmetro obrigatório, obtido: %s", res.Stdout)
 	}
 
@@ -71,15 +72,20 @@ func TestSignValidationErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Erro: %v", err)
 	}
-	// O servidor Java v1.0.5 valida a presença do arquivo antes das sugestões de flag
-	if !ContainsIgnoringColors(res.Stdout, "Você quis dizer '--file'?") && !ContainsIgnoringColors(res.Stdout, "parâmetro '--file' é obrigatório") {
-		t.Errorf("Esperada sugestão de flag ou erro de obrigatoriedade, obtido: %s", res.Stdout)
+	if res.ExitCode != 1 {
+		t.Errorf("Esperado exit code 1, obtido %d", res.ExitCode)
+	}
+	if !ContainsIgnoringColors(res.Stdout, "parâmetro 'file' no JSON é obrigatório") {
+		t.Errorf("Esperado erro de obrigatoriedade, obtido: %s", res.Stdout)
 	}
 
 	// TC-06: Arquivo inexistente
 	res, err = RunCLI("sign", "--file", "non_existent.json")
 	if err != nil {
 		t.Fatalf("Erro: %v", err)
+	}
+	if res.ExitCode != 1 {
+		t.Errorf("Esperado exit code 1, obtido %d", res.ExitCode)
 	}
 	if !ContainsIgnoringColors(res.Stdout, "não encontrado") {
 		t.Errorf("Esperado erro de arquivo não encontrado, obtido: %s", res.Stdout)
@@ -92,8 +98,10 @@ func TestValidateErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Erro: %v", err)
 	}
-	// Aceita tanto a mensagem de falta de argumento quanto a de obrigatoriedade do parâmetro
-	if !ContainsIgnoringColors(res.Stdout, "caminho do arquivo") && !ContainsIgnoringColors(res.Stdout, "parâmetro '--file' é obrigatório") {
+	if res.ExitCode != 1 {
+		t.Errorf("Esperado exit code 1, obtido %d", res.ExitCode)
+	}
+	if !ContainsIgnoringColors(res.Stdout, "parâmetro 'file' no JSON é obrigatório") {
 		t.Errorf("Esperado erro de falta de argumento, obtido: %s", res.Stdout)
 	}
 }
