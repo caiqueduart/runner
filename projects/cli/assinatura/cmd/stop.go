@@ -8,8 +8,9 @@ import (
 
 var stopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: "Encerra o servidor do assinador",
+	Short: "Para o servidor do assinador",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		runStop()
 	},
 }

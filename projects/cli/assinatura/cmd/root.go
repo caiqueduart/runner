@@ -4,5 +4,5 @@ import "github.com/spf13/cobra"
 
 var RootCmd = &cobra.Command{
 	Use:   "assinatura",
-	Short: "Ferramenta CLI para assinatura",
+	Short: "Ferramenta CLI para assinatura digital e validação",
 }

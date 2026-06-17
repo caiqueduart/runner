@@ -24,7 +24,7 @@ var signCmd = &cobra.Command{
 }
 
 func runSign() {
-	// Pega todos os argumentos após 'sign'
+	// pega todos os argumentos após 'sign'
 	// os.Args[0] = cli, os.Args[1] = sign, os.Args[2:] = restante
 	args := os.Args[2:]
 

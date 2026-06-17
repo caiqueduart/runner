@@ -11,6 +11,7 @@ const (
 	ColorCyan   = "\033[36m"
 )
 
+// exibe uma mensagem no terminal com um prefixo colorido em Ciano.
 func LogFeedback(prefix, format string, a ...any) {
 	fmt.Printf(ColorCyan+"[%s] "+ColorReset+format+"\n", append([]any{prefix}, a...)...)
 }

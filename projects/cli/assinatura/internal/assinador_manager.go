@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+// localiza o executável do Java 21, priorizando o provisionamento automático
+// da pasta .hubsaude/jdk caso não esteja no PATH.
 func GetJavaPath(binName string) (string, error) {
 	if runtime.GOOS == "windows" && !strings.HasSuffix(binName, ".exe") {
 		binName += ".exe"
@@ -33,11 +35,13 @@ func GetJavaPath(binName string) (string, error) {
 	}
 
 	LogFeedback("ASSINATURA CONFIG", "JDK 21 não encontrado. Iniciando download...")
+
 	if err := DownloadJava21(GetJDKDir()); err != nil {
 		return "", fmt.Errorf("falha ao baixar JDK 21: %w", err)
 	}
 
 	LogFeedback("ASSINATURA CONFIG", "JDK 21 instalado com sucesso.")
+
 	return managedBin, nil
 }
 
@@ -47,6 +51,7 @@ func isJava21(javaPath string) bool {
 	if err != nil {
 		return false
 	}
+
 	return strings.Contains(string(output), "version \"21")
 }
 
@@ -55,6 +60,7 @@ func DownloadJava21(targetDir string) error {
 	if arch == "amd64" {
 		arch = "x64"
 	}
+
 	osName := runtime.GOOS
 	if osName == "darwin" {
 		osName = "mac"
@@ -65,10 +71,13 @@ func DownloadJava21(targetDir string) error {
 	if err != nil {
 		return err
 	}
+
 	defer resp.Body.Close()
 
 	var releases []map[string]interface{}
+
 	json.NewDecoder(resp.Body).Decode(&releases)
+
 	if len(releases) == 0 {
 		return fmt.Errorf("nenhum release encontrado na Adoptium")
 	}
@@ -79,22 +88,27 @@ func DownloadJava21(targetDir string) error {
 	os.MkdirAll(targetDir, 0755)
 	tmpFile := filepath.Join(os.TempDir(), "jdk21_download"+filepath.Ext(downloadUrl))
 	out, _ := os.Create(tmpFile)
+
 	defer os.Remove(tmpFile)
 
 	resp, _ = http.Get(downloadUrl)
+
 	defer resp.Body.Close()
 	io.Copy(out, resp.Body)
 	out.Close()
 
 	LogFeedback("ASSINATURA CONFIG", "Extraindo arquivos...")
+
 	if strings.HasSuffix(downloadUrl, ".zip") {
 		return extractZip(tmpFile, targetDir)
 	}
+
 	return extractTarGz(tmpFile, targetDir)
 }
 
 func DownloadAssinadorJar(targetPath string) error {
 	LogFeedback("ASSINATURA CONFIG", "JAR não encontrado. Baixando...")
+
 	tag := "assinador-v" + CompatibleAssinadorVersion
 	apiUrl := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", RepoPath, tag)
 
@@ -102,6 +116,7 @@ func DownloadAssinadorJar(targetPath string) error {
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("falha ao consultar release no GitHub")
 	}
+
 	defer resp.Body.Close()
 
 	var release struct {
@@ -111,10 +126,13 @@ func DownloadAssinadorJar(targetPath string) error {
 			Digest      string `json:"digest"`
 		} `json:"assets"`
 	}
+
 	json.NewDecoder(resp.Body).Decode(&release)
 
 	var jarURL, digest string
+
 	expectedName := fmt.Sprintf("assinador-v%s.jar", CompatibleAssinadorVersion)
+
 	for _, asset := range release.Assets {
 		if asset.Name == expectedName {
 			jarURL = asset.DownloadURL
@@ -128,28 +146,40 @@ func DownloadAssinadorJar(targetPath string) error {
 	}
 
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
+
 	out, _ := os.Create(targetPath)
+
 	resp, _ = http.Get(jarURL)
+
 	defer resp.Body.Close()
+
 	io.Copy(out, resp.Body)
+
 	out.Close()
 
 	if digest != "" {
 		LogFeedback("ASSINATURA CONFIG", "Validando integridade...")
+
 		if ok, _ := checkFileSHA256(targetPath, digest); !ok {
 			os.Remove(targetPath)
 			return fmt.Errorf("ERRO DE SEGURANÇA: SHA256 não coincide")
 		}
+
 		LogFeedback("ASSINATURA CONFIG", "Integridade OK.")
 	}
+
 	return nil
 }
 
 func savePID(pid int, port string) {
 	path := GetPIDFilePath()
+
 	os.MkdirAll(filepath.Dir(path), 0755)
+
 	content := fmt.Sprintf("PID=%d\nPORT=%s\n", pid, port)
+
 	os.WriteFile(path, []byte(content), 0644)
+
 	LogFeedback("ASSINATURA CONFIG", "Rastreabilidade registrada (PID: %d, Porta: %s).", pid, port)
 }
 
@@ -163,14 +193,20 @@ func CallJavaServer(endpoint string, data string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	defer resp.Body.Close()
+
 	body, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("erro %d: %s", resp.StatusCode, string(body))
 	}
+
 	return string(body), nil
 }
 
+// verifica se o servidor HTTP do assinador está ativo.
+// caso contrário, inicia-o em background e aguarda o status online.
 func EnsureServerRunning() error {
 	resp, err := http.Get("http://localhost:" + ServerPort + "/health")
 	if err == nil && resp.StatusCode == http.StatusOK {
@@ -213,17 +249,21 @@ func EnsureServerRunning() error {
 			return nil
 		}
 	}
+
 	return fmt.Errorf("timeout ao aguardar o servidor subir")
 }
 
+// orquestra a execução da assinatura/validação.
+// tenta usar o modo servidor (HTTP) e regride para modo local (JAR direto) se necessário.
 func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
-	// MODO DESENVOLVEDOR: Executa direto do .java se a variável DEV_MODE=true
+	// MODO DESENVOLVEDOR: Executa direto do .java se a variável DEV_MODE=true no arquivo .env
 	if os.Getenv("DEV_MODE") == "true" {
 		LogFeedback("ASSINATURA CONFIG", "Modo Desenvolvedor Ativo (Lendo App.java).")
 
 		currDir, _ := os.Getwd()
 		assinadorDir := ""
 		tempDir := currDir
+
 		for i := 0; i < 6; i++ {
 			target := filepath.Join(tempDir, "projects", "assinador")
 			if _, err := os.Stat(target); err == nil {
@@ -248,14 +288,17 @@ func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 		javaCmd := exec.Command("java", args...)
 
 		output, err := javaCmd.CombinedOutput()
+
 		if err != nil {
 			return string(output), nil
 		}
+
 		return string(output), nil
 	}
 
 	if err := EnsureServerRunning(); err == nil {
 		fileName := ""
+
 		for i, arg := range cmdArgs {
 			if arg == "--file" && i+1 < len(cmdArgs) {
 				fileName = cmdArgs[i+1]
@@ -263,10 +306,12 @@ func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 				fileName = arg
 			}
 		}
+
 		return CallJavaServer(cmdKey, fileName)
 	}
 
 	LogFeedback("ASSINATURA CONFIG", "Servidor indisponível. Usando modo local...")
+
 	javaPath, _ := GetJavaPath("java")
 	localJarPath := GetJarPath()
 
@@ -277,5 +322,6 @@ func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 	if err != nil {
 		return string(output), nil
 	}
+
 	return string(output), nil
 }

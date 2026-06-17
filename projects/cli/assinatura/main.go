@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// main é o ponto de entrada da CLI de Assinatura. Ela carrega variáveis de ambiente
+// nativas (.env) e executa o comando raiz definido no Cobra.
 func main() {
 	loadNativeEnv()
 
@@ -16,6 +18,8 @@ func main() {
 	}
 }
 
+// loadNativeEnv busca e carrega o arquivo .env subindo até 5 níveis de diretório.
+// Garante que variáveis como DEV_MODE sejam lidas mesmo em execuções aninhadas.
 func loadNativeEnv() {
 	// Procura pelo .env subindo até 5 níveis (para suportar execução de subpastas)
 	currDir, _ := os.Getwd()
