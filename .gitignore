@@ -1,5 +1,12 @@
 /.vscode
 /projects/assinador/bin
 /projects/assinador/target
+*.class
+*.jar
+*.exe
+*.log
+*.pid
 *.txt
 .env
+
+/docs/plano-de-melhoria.md
