@@ -306,7 +306,7 @@ func EnsureServerRunning() error {
 		if assinadorDir == "" {
 			return fmt.Errorf("não foi possível localizar projects/assinador")
 		}
-		srcDir := filepath.Join(assinadorDir, "src")
+		srcDir := filepath.Join(assinadorDir, "src", "main", "java")
 		appJava := filepath.Join(srcDir, "App.java")
 		cmd = exec.Command(javaPath, "-cp", srcDir, appJava, "server", "--port", ServerPort, "--timeout", ServerTimeoutMinutes)
 
@@ -378,7 +378,7 @@ func ExecJavaSigner(cmdKey string, cmdArgs []string) (string, error) {
 			return "", fmt.Errorf("não foi possível localizar projects/assinador")
 		}
 
-		srcDir := filepath.Join(assinadorDir, "src")
+		srcDir := filepath.Join(assinadorDir, "src", "main", "java")
 		appJava := filepath.Join(srcDir, "App.java")
 
 		fileName := ""
