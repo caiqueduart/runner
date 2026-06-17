@@ -18,7 +18,7 @@ O projeto está dividido em três componentes principais:
 
 ## Como Começar
 
-## As CLIs do Runner possuem **auto-provisionamento**. Isso significa que você não precisa instalar o Java manualmente.
+As CLIs do Runner possuem **auto-provisionamento**. Isso significa que você não precisa instalar o Java manualmente.
 
 1.  **Baixe o executável** da CLI desejada na seção de [Releases](https://github.com/caiqueduart/runner/releases).
 2.  **Execute um comando**: Ao rodar algum comando de Assinatura ou Simulador pela primeira vez, as CLIs irão:

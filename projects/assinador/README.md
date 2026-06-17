@@ -27,3 +27,18 @@ java -cp bin App server --port 8080 --timeout 5
 | `/validate` | `POST` | Recebe o nome do arquivo e valida a assinatura existente.           |
 | `/health`   | `GET`  | Retorna o status de saúde e tempo de atividade do servidor.         |
 | `/stop`     | `POST` | Encerra o servidor.                                                 |
+
+## Modo Desenvolvedor
+
+Este projeto suporta um modo de execução para desenvolvimento que permite testar alterações no código Java sem a necessidade de gerar um novo JAR.
+
+Para ativar:
+
+1. Crie um arquivo `.env` na raiz do projeto.
+2. Adicione a seguinte variável:
+
+    ```env
+    DEV_MODE=true
+    ```
+
+    Quando esta variável está ativa, a CLI de Assinatura irá compilar e executar os arquivos `.java` diretamente utilizando o comando `java -cp`, ignorando o JAR baixado do GitHub.
