@@ -47,7 +47,11 @@ jobs:
         run: |
           $destination = Join-Path $HOME ".hubsaude/bin"
           New-Item -ItemType Directory -Force -Path $destination | Out-Null
-          Copy-Item "projects/assinador/target/assinador-v1.0.5.jar" $destination
+          $jar = Get-ChildItem "projects/assinador/target/assinador-v*.jar" | Select-Object -First 1
+          if (-not $jar) {
+            throw "JAR do assinador não encontrado em projects/assinador/target"
+          }
+          Copy-Item $jar.FullName $destination
 
       - name: Check Go formatting
         shell: pwsh

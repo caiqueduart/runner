@@ -8,12 +8,20 @@ A CLI gerencia automaticamente suas dependências. Na primeira execução, ela b
 
 ## Comandos Principais
 
+O modo servidor HTTP é o padrão. Use `--local` para executar o JAR diretamente, `--port` para escolher a porta e `--timeout` para configurar os minutos de inatividade.
+
 ### 1. Assinar um arquivo
 
 Realiza a assinatura de um documento. Se o servidor do assinador não estiver rodando, a CLI o iniciará em background automaticamente.
 
 ```bash
 assinatura sign --file receita.json
+
+# Execução local explícita
+assinatura --local sign --file receita.json
+
+# Servidor em porta e timeout personalizados
+assinatura --port 9090 --timeout 10 sign --file receita.json
 ```
 
 - **Retorno**: Mensagem confirmando a assinatura e o código gerado.
@@ -35,6 +43,9 @@ Encerra o processo do assinador que está rodando em background.
 
 ```bash
 assinatura stop
+
+# Para uma instância em outra porta
+assinatura --port 9090 stop
 ```
 
 ### 4. Versão
@@ -63,3 +74,5 @@ A CLI de Assinatura utiliza um contrato de comunicação estrito e bidirecional 
     - `Exit Code 1`: Erros de validação ou entrada do usuário (ex: arquivo não encontrado).
     - `Exit Code 2`: Erros de execução do sistema.
 - **Interoperabilidade**: Outras aplicações (como Frontends ou painéis Python) podem invocar a API HTTP local na porta 8080 recebendo dados limpos e perfeitamente tipados.
+
+O contrato completo está documentado em [`docs/contrato-assinador.md`](../../../docs/contrato-assinador.md).
