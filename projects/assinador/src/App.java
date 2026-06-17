@@ -4,7 +4,6 @@ import services.HttpServerService;
 import services.SignatureService;
 import services.Tint;
 
-
 public class App {
     public static void main(String[] args) throws UnsupportedEncodingException {
         int status = run(args);
