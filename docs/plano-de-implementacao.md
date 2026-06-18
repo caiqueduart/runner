@@ -40,11 +40,11 @@ Este plano detalha as etapas de desenvolvimento do sistema **Runner**, integrand
 
 - [ ] **Assinaturas Digitais:** Integrar verificação de assinaturas **Cosign/Sigstore** na CLI.
 - [ ] **Logs e Debug:** Implementar flags de verbosidade (`--verbose`) e logs estruturados.
-- [ ] **Tratamento de Erros:** Refinar mensagens de erro para serem 100% aderentes à especificação.
-- [ ] **Documentação:** Atualizar README e documentação de uso da CLI.
+- [x] **Tratamento de Erros:** Refinar mensagens de erro para serem aderentes à especificação.
+- [x] **Documentação:** Atualizar README e documentação de uso da CLI.
 
 ### Sprint 6: Validação e Entrega
 
-- [ ] **Testes de Integração:** Suite de testes automatizados CLI <-> Java.
-- [ ] **Testes de Aceitação:** Validar todos os cenários descritos na especificação.
-- [ ] **Release Final:** Gerar versão final com todos os artefatos assinados.
+- [x] **Testes de Integração:** Suite de testes automatizados CLI <-> Java.
+- [x] **Testes de Aceitação:** Validar todos os cenários descritos na especificação.
+- [x] **Release Final:** Gerar versão final com todos os artefatos assinados.
