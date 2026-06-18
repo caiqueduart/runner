@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"runner/simulador/internal"
 
 	"github.com/spf13/cobra"
@@ -11,10 +12,12 @@ import (
 var stopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Para o simulador HubSaúde",
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := internal.StopSimulador(); err != nil {
-			internal.PrintError("Erro ao parar simulador: %v\n", err)
+			return fmt.Errorf("erro ao parar simulador: %w", err)
 		}
+		return nil
 	},
 }
 

@@ -10,6 +10,7 @@ import (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Exibe a versão da CLI do Simulador",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Simulador CLI v%s\n", internal.SimuladorCLIVersion)
 		fmt.Printf("Compatível com Simulador JAR v%s\n", internal.CompatibleSimuladorVersion)

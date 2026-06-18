@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"runner/simulador/internal"
 
 	"github.com/spf13/cobra"
@@ -11,10 +12,12 @@ import (
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Inicia o simulador HubSaúde em background",
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := internal.EnsureSimuladorRunning(); err != nil {
-			internal.PrintError("Erro ao iniciar simulador: %v\n", err)
+			return fmt.Errorf("erro ao iniciar simulador: %w", err)
 		}
+		return nil
 	},
 }
 

@@ -10,15 +10,17 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Verifica o status do simulador HubSaúde",
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		info, err := internal.GetSimuladorStatus()
 		if err != nil {
 			internal.LogFeedback("SIMULADOR CONFIG", "Simulador não está respondendo corretamente (Offline ou erro).")
-			return
+			return fmt.Errorf("falha ao consultar simulador: %w", err)
 		}
 
 		internal.LogFeedback("SIMULADOR SERVIDOR", "Simulador Online!")
 		fmt.Printf("Detalhes: %s\n", info)
+		return nil
 	},
 }
 

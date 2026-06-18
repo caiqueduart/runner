@@ -24,7 +24,11 @@ var httpClient = &http.Client{
 var simuladorBaseURL = fmt.Sprintf("https://localhost:%s", SimuladorPort)
 
 func simuladorURL(path string) string {
-	return simuladorBaseURL + path
+	baseURL := simuladorBaseURL
+	if configuredURL := os.Getenv("SIMULADOR_BASE_URL"); configuredURL != "" {
+		baseURL = strings.TrimRight(configuredURL, "/")
+	}
+	return baseURL + path
 }
 
 func IsPortAvailable(port string) bool {
