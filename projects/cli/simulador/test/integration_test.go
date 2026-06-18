@@ -48,7 +48,7 @@ func TestVersionCommand(t *testing.T) {
 	if result.exitCode != 0 {
 		t.Fatalf("version retornou código %d: %s", result.exitCode, result.stderr)
 	}
-	if !strings.Contains(result.stdout, "Simulador CLI v1.1.0") || !strings.Contains(result.stdout, "Simulador JAR v0.1.7") {
+	if !strings.Contains(result.stdout, "Simulador CLI v1.1.2") || !strings.Contains(result.stdout, "Simulador JAR v0.1.7") {
 		t.Fatalf("versões esperadas não encontradas: %s", result.stdout)
 	}
 }

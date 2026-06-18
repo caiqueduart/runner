@@ -1,7 +1,7 @@
 package internal
 
 const (
-	SimuladorCLIVersion        = "1.1.1"
+	SimuladorCLIVersion        = "1.1.2"
 	CompatibleSimuladorVersion = "0.1.7"
 	RepoPath                   = "kyriosdata/runner"
 	SimuladorPort              = "8443"
