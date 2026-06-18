@@ -6,6 +6,7 @@ on:
             - main
         paths:
             - 'projects/cli/assinatura/**'
+            - '.github/workflows/release-assinatura-cli.yaml'
 
 permissions:
     contents: write
@@ -42,6 +43,18 @@ jobs:
 
             - name: Download dependências
               run: go mod download
+
+            - name: Preparar Assinador para os testes
+              shell: pwsh
+              run: |
+                  $assinadorVersion = (Select-String -Path "assinatura/internal/constants.go" -Pattern 'CompatibleAssinadorVersion\s+=\s+"([^"]+)"').Matches.Groups[1].Value
+                  mvn --batch-mode -f ../assinador/pom.xml verify
+                  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                  $source = "../assinador/target/assinador-v$assinadorVersion.jar"
+                  if (-not (Test-Path $source)) { throw "JAR esperado nao foi gerado: $source" }
+                  $destination = Join-Path $HOME ".hubsaude/bin"
+                  New-Item -ItemType Directory -Force -Path $destination | Out-Null
+                  Copy-Item $source $destination
 
             - name: Executar Testes
               run: |

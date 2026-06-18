@@ -1,6 +1,7 @@
 name: Release Assinador Java
 
 on:
+    workflow_dispatch:
     push:
         branches:
             - main
@@ -35,12 +36,21 @@ jobs:
             - name: Extrair versão do Java
               id: version
               shell: bash
+              env:
+                  GH_TOKEN: ${{ github.token }}
               run: |
                   # Extrai a versão a partir do arquivo Version.java
                   RAW_VERSION=$(grep -oP 'public static final String APP_VERSION = "\K[^"]+' src/main/java/Version.java)
+                  POM_VERSION=$(grep -oPm1 '(?<=<version>)[^<]+' pom.xml)
+                  if [ "$RAW_VERSION" != "$POM_VERSION" ]; then
+                    echo "Versões divergentes: Version.java=$RAW_VERSION, pom.xml=$POM_VERSION"
+                    exit 1
+                  fi
                   VERSION="assinador-v$RAW_VERSION"
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
                   echo "RAW_VERSION=$RAW_VERSION" >> $GITHUB_ENV
+
+                  ASSET_NAME="assinador-v$RAW_VERSION.jar"
 
                   # Verifica se a tag já existe no repositório
                   if git ls-remote --tags origin | grep -q "refs/tags/$VERSION"; then
@@ -49,16 +59,27 @@ jobs:
                     echo "TAG_EXISTS=false" >> $GITHUB_ENV
                   fi
 
+                  # Publica uma nova versão ou repara uma release sem o JAR.
+                  if gh api "repos/${{ github.repository }}/releases/tags/$VERSION" \
+                    --jq ".assets[] | select(.name == \"$ASSET_NAME\") | .name" 2>/dev/null | grep -q "$ASSET_NAME"; then
+                    echo "ASSET_EXISTS=true" >> $GITHUB_ENV
+                    echo "SHOULD_RELEASE=false" >> $GITHUB_ENV
+                  else
+                    echo "ASSET_EXISTS=false" >> $GITHUB_ENV
+                    echo "SHOULD_RELEASE=true" >> $GITHUB_ENV
+                  fi
+
             - name: Testar, Compilar e Gerar JAR
-              if: env.TAG_EXISTS == 'false'
+              if: env.SHOULD_RELEASE == 'true'
               run: mvn --batch-mode verify
 
             - name: Upload para Release
               uses: softprops/action-gh-release@v2
-              if: env.TAG_EXISTS == 'false'
+              if: env.SHOULD_RELEASE == 'true'
               with:
                   tag_name: ${{ env.VERSION }}
                   name: 'Release ${{ env.VERSION }}'
                   generate_release_notes: true
+                  fail_on_unmatched_files: true
                   files: |
                       projects/assinador/target/assinador-v${{ env.RAW_VERSION }}.jar

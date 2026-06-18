@@ -47,11 +47,10 @@ jobs:
         run: |
           $destination = Join-Path $HOME ".hubsaude/bin"
           New-Item -ItemType Directory -Force -Path $destination | Out-Null
-          $jar = Get-ChildItem "projects/assinador/target/assinador-v*.jar" | Select-Object -First 1
-          if (-not $jar) {
-            throw "JAR do assinador não encontrado em projects/assinador/target"
-          }
-          Copy-Item $jar.FullName $destination
+          $assinadorVersion = (Select-String -Path "projects/cli/assinatura/internal/constants.go" -Pattern 'CompatibleAssinadorVersion\s+=\s+"([^"]+)"').Matches.Groups[1].Value
+          $jar = "projects/assinador/target/assinador-v$assinadorVersion.jar"
+          if (-not (Test-Path $jar)) { throw "JAR esperado nao foi gerado: $jar" }
+          Copy-Item $jar $destination
 
       - name: Check Go formatting
         shell: pwsh

@@ -13,7 +13,7 @@ O projeto está dividido em três componentes principais, consulte suas respecti
 ## Releases
 
 - Cada componente publica sua própria release quando a respectiva versão é alterada.
-- As tags seguem o padrão do componente, como `assinador-v1.0.5`, `assinatura-cli-v0.1.0` e `simulador-cli-v0.1.0`.
+- As tags seguem o padrão do componente, ex: `assinador-v1.1.0`, `assinatura-cli-v1.2.0` e `simulador-cli-v0.1.0`.
 - O arquivo baixado na release já recebe o SHA-256 automático do GitHub.
 
 ## Como Começar
